@@ -50,12 +50,35 @@ final class StockDetailsViewModelTests: XCTestCase {
         XCTAssertFalse(sut.isPresentingAnalystForecasts)
     }
 
+    func testDidTapMarketSentimentSeeAllPresentsFullScreenCover() {
+        let sut = StockDetailsViewModel(stock: makeAppleStock())
+
+        XCTAssertFalse(sut.isPresentingMarketSentiment)
+
+        sut.didTapMarketSentimentSeeAll()
+
+        XCTAssertTrue(sut.isPresentingMarketSentiment)
+
+        sut.didDismissMarketSentiment()
+
+        XCTAssertFalse(sut.isPresentingMarketSentiment)
+    }
+
     func testAppleContentMatchesExpectedSectionData() {
         let sut = StockDetailsViewModel(stock: makeAppleStock())
 
         XCTAssertEqual(sut.analystForecasts.map(\.count), [12, 10, 6, 2, 0])
         XCTAssertEqual(sut.sentimentItems.map(\.count), [12, 4])
         XCTAssertEqual(sut.earningsEstimateRows.map(\.yearText), ["2024", "2025", "2026", "2027", "2028"])
+    }
+
+    func testMarketSentimentViewModelDismissActionResetsPresentationState() {
+        let sut = StockDetailsViewModel(stock: makeAppleStock())
+
+        sut.didTapMarketSentimentSeeAll()
+        sut.marketSentimentViewModel.didTapBackButton()
+
+        XCTAssertFalse(sut.isPresentingMarketSentiment)
     }
 
     private func makeAppleStock() -> PortfolioStock {

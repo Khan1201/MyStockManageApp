@@ -3,6 +3,7 @@ import SwiftUI
 final class StockDetailsViewModel: ObservableObject {
     @Published private(set) var isAddedToWatchlist: Bool
     @Published private(set) var isPresentingAnalystForecasts: Bool
+    @Published private(set) var isPresentingMarketSentiment: Bool
 
     let stock: PortfolioStock
     let analystForecasts: [StockForecastItem]
@@ -19,6 +20,7 @@ final class StockDetailsViewModel: ObservableObject {
         self.stock = stock
         self.isAddedToWatchlist = isAddedToWatchlist
         self.isPresentingAnalystForecasts = false
+        self.isPresentingMarketSentiment = false
         self.dismissAction = dismissAction
 
         let content = Self.content(for: stock)
@@ -54,6 +56,13 @@ final class StockDetailsViewModel: ObservableObject {
         )
     }
 
+    var marketSentimentViewModel: MarketSentimentViewModel {
+        MarketSentimentViewModel(
+            stock: stock,
+            dismissAction: didDismissMarketSentiment
+        )
+    }
+
     func didTapCloseButton() {
         dismissAction()
     }
@@ -70,7 +79,13 @@ final class StockDetailsViewModel: ObservableObject {
         isPresentingAnalystForecasts = false
     }
 
-    func didTapMarketSentimentSeeAll() {}
+    func didTapMarketSentimentSeeAll() {
+        isPresentingMarketSentiment = true
+    }
+
+    func didDismissMarketSentiment() {
+        isPresentingMarketSentiment = false
+    }
 
     func didTapEarningsEstimatesSeeAll() {}
 

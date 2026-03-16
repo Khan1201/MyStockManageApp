@@ -74,6 +74,9 @@ struct StockDetailsView: View {
         .fullScreenCover(isPresented: analystForecastsPresentedBinding) {
             AnalystForecastsView(viewModel: viewModel.analystForecastsViewModel)
         }
+        .fullScreenCover(isPresented: marketSentimentPresentedBinding) {
+            MarketSentimentView(viewModel: viewModel.marketSentimentViewModel)
+        }
     }
 
     private static let backgroundColor = Color(red: 0.96, green: 0.94, blue: 0.93)
@@ -87,6 +90,19 @@ struct StockDetailsView: View {
                 }
 
                 viewModel.didDismissAnalystForecasts()
+            }
+        )
+    }
+
+    private var marketSentimentPresentedBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.isPresentingMarketSentiment },
+            set: { isPresented in
+                guard !isPresented else {
+                    return
+                }
+
+                viewModel.didDismissMarketSentiment()
             }
         )
     }
