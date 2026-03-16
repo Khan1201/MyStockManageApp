@@ -4,6 +4,7 @@ final class StockDetailsViewModel: ObservableObject {
     @Published private(set) var isAddedToWatchlist: Bool
     @Published private(set) var isPresentingAnalystForecasts: Bool
     @Published private(set) var isPresentingMarketSentiment: Bool
+    @Published private(set) var isPresentingEarningsRevenueDetails: Bool
 
     let stock: PortfolioStock
     let analystForecasts: [StockForecastItem]
@@ -21,6 +22,7 @@ final class StockDetailsViewModel: ObservableObject {
         self.isAddedToWatchlist = isAddedToWatchlist
         self.isPresentingAnalystForecasts = false
         self.isPresentingMarketSentiment = false
+        self.isPresentingEarningsRevenueDetails = false
         self.dismissAction = dismissAction
 
         let content = Self.content(for: stock)
@@ -63,6 +65,13 @@ final class StockDetailsViewModel: ObservableObject {
         )
     }
 
+    var earningsRevenueDetailsViewModel: EarningsRevenueDetailsViewModel {
+        EarningsRevenueDetailsViewModel(
+            stock: stock,
+            dismissAction: didDismissEarningsRevenueDetails
+        )
+    }
+
     func didTapCloseButton() {
         dismissAction()
     }
@@ -87,7 +96,13 @@ final class StockDetailsViewModel: ObservableObject {
         isPresentingMarketSentiment = false
     }
 
-    func didTapEarningsEstimatesSeeAll() {}
+    func didTapEarningsEstimatesSeeAll() {
+        isPresentingEarningsRevenueDetails = true
+    }
+
+    func didDismissEarningsRevenueDetails() {
+        isPresentingEarningsRevenueDetails = false
+    }
 
     private var priceChangeAmount: Double {
         let rate = 1 + (stock.changePercent / 100)

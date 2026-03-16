@@ -64,6 +64,20 @@ final class StockDetailsViewModelTests: XCTestCase {
         XCTAssertFalse(sut.isPresentingMarketSentiment)
     }
 
+    func testDidTapEarningsEstimatesSeeAllPresentsFullScreenCover() {
+        let sut = StockDetailsViewModel(stock: makeAppleStock())
+
+        XCTAssertFalse(sut.isPresentingEarningsRevenueDetails)
+
+        sut.didTapEarningsEstimatesSeeAll()
+
+        XCTAssertTrue(sut.isPresentingEarningsRevenueDetails)
+
+        sut.didDismissEarningsRevenueDetails()
+
+        XCTAssertFalse(sut.isPresentingEarningsRevenueDetails)
+    }
+
     func testAppleContentMatchesExpectedSectionData() {
         let sut = StockDetailsViewModel(stock: makeAppleStock())
 
@@ -79,6 +93,15 @@ final class StockDetailsViewModelTests: XCTestCase {
         sut.marketSentimentViewModel.didTapBackButton()
 
         XCTAssertFalse(sut.isPresentingMarketSentiment)
+    }
+
+    func testEarningsRevenueDetailsViewModelDismissActionResetsPresentationState() {
+        let sut = StockDetailsViewModel(stock: makeAppleStock())
+
+        sut.didTapEarningsEstimatesSeeAll()
+        sut.earningsRevenueDetailsViewModel.didTapBackButton()
+
+        XCTAssertFalse(sut.isPresentingEarningsRevenueDetails)
     }
 
     private func makeAppleStock() -> PortfolioStock {
