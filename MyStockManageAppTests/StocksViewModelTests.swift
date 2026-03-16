@@ -19,14 +19,6 @@ final class StocksViewModelTests: XCTestCase {
         XCTAssertEqual(sut.displayedStocks.map(\.symbol), ["TSLA"])
     }
 
-    func testDidSelectTabUpdatesSelectedTab() {
-        let sut = StocksViewModel(portfolio: makePortfolio())
-
-        sut.didSelectTab(.quotes)
-
-        XCTAssertEqual(sut.selectedTab, .quotes)
-    }
-
     func testIsShowingSearchResultsIsTrueOnlyForNonWhitespaceQuery() {
         let sut = StocksViewModel(
             portfolio: makePortfolio(),

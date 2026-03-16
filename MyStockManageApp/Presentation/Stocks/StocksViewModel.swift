@@ -2,7 +2,6 @@ import SwiftUI
 
 final class StocksViewModel: ObservableObject {
     @Published var searchText = ""
-    @Published private(set) var selectedTab: StocksTab = .home
     @Published private(set) var isEditingPortfolio = false
     @Published private(set) var selectedPortfolioStock: PortfolioStock?
     @Published private(set) var selectedSearchResultStock: SearchResultStock?
@@ -45,10 +44,6 @@ final class StocksViewModel: ObservableObject {
             stock.symbol.localizedLowercase.contains(query) ||
             stock.companyName.localizedLowercase.contains(query)
         }
-    }
-
-    func didSelectTab(_ tab: StocksTab) {
-        selectedTab = tab
     }
 
     func didTapClearSearch() {

@@ -8,10 +8,10 @@ struct StocksView: View {
     private static let searchResultsTitle: LocalizedStringResource = "Search Results"
     private static let cancelTitle: LocalizedStringResource = "Cancel"
     
-    @StateObject private var viewModel: StocksViewModel
+    @ObservedObject var viewModel: StocksViewModel
     
     init(viewModel: StocksViewModel = StocksViewModel()) {
-        _viewModel = StateObject(wrappedValue: viewModel)
+        self.viewModel = viewModel
     }
     
     var body: some View {
@@ -22,13 +22,13 @@ struct StocksView: View {
                     .foregroundStyle(Color(red: 0.12, green: 0.16, blue: 0.28))
                     .frame(maxWidth: .infinity)
                     .padding(.top, 10)
-                
+
                 SearchBarView(
                     text: $viewModel.searchText,
                     placeholder: Self.searchPlaceholder,
                     clearAction: viewModel.didTapClearSearch
                 )
-                
+
                 if viewModel.isShowingSearchResults {
                     SearchResultsSectionView(
                         title: Self.searchResultsTitle,
@@ -48,17 +48,11 @@ struct StocksView: View {
                 }
             }
             .padding(.bottom, 108)
-                        
+
             Spacer()
         }
         .padding(.horizontal, 16)
         .accessibilityIdentifier("stocks_root_view")
-        .overlay(alignment: .bottom) {
-            BottomTabBar(
-                selectedTab: viewModel.selectedTab,
-                selectionAction: viewModel.didSelectTab
-            )
-        }
         .fullScreenCover(item: selectedPortfolioStockBinding) { stock in
             StockDetailsView(
                 viewModel: StockDetailsViewModel(

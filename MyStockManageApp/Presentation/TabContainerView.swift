@@ -1,12 +1,12 @@
 import SwiftUI
 
-struct StocksTabContainerView: View {
-    @StateObject private var viewModel: StocksTabContainerViewModel
+struct TabContainerView: View {
+    @StateObject private var viewModel: TabContainerViewModel
     @StateObject private var stocksViewModel: StocksViewModel
     @StateObject private var tradeHistoryViewModel: TradeHistoryViewModel
 
     init(
-        viewModel: StocksTabContainerViewModel = StocksTabContainerViewModel(),
+        viewModel: TabContainerViewModel = TabContainerViewModel(),
         stocksViewModel: StocksViewModel = StocksViewModel(),
         tradeHistoryViewModel: TradeHistoryViewModel = TradeHistoryViewModel()
     ) {
@@ -20,7 +20,7 @@ struct StocksTabContainerView: View {
             Color.white.ignoresSafeArea()
             contentView
         }
-        .accessibilityIdentifier("stocks_tab_container_view")
+        .accessibilityIdentifier("tab_container_view")
         .overlay(alignment: .bottom) {
             BottomTabBar(
                 selectedTab: viewModel.selectedTab,
@@ -44,8 +44,8 @@ struct StocksTabContainerView: View {
     }
 }
 
-struct StocksTabContainerView_Previews: PreviewProvider {
+struct TabContainerView_Previews: PreviewProvider {
     static var previews: some View {
-        StocksTabContainerView()
+        TabContainerView()
     }
 }
