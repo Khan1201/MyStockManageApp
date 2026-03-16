@@ -11,7 +11,7 @@ struct MarketSentimentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AnalystForecastsNavigationBarView(
+            CenteredBackNavigationBarView(
                 title: Self.screenTitle,
                 backAction: viewModel.didTapBackButton
             )

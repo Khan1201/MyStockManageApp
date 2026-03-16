@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct AnalystForecastsNavigationBarView: View {
+struct CenteredBackNavigationBarView: View {
     let title: LocalizedStringResource
     let backAction: () -> Void
 
