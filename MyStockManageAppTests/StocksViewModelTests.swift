@@ -90,6 +90,17 @@ final class StocksViewModelTests: XCTestCase {
         XCTAssertEqual(sut.selectedPortfolioStock, stock)
     }
 
+    func testDidDismissPortfolioStockDetailsClearsSelection() {
+        let sut = StocksViewModel(portfolio: makePortfolio())
+
+        sut.didSelectPortfolioStock(makePortfolio()[0])
+        XCTAssertNotNil(sut.selectedPortfolioStock)
+
+        sut.didDismissPortfolioStockDetails()
+
+        XCTAssertNil(sut.selectedPortfolioStock)
+    }
+
     func testDidSelectSearchResultStockStoresSelection() {
         let sut = StocksViewModel(
             portfolio: makePortfolio(),
