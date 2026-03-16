@@ -7,7 +7,6 @@ struct TradeHistoryView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(Self.screenTitle)
                         .font(.system(size: 25, weight: .bold, design: .rounded))
@@ -22,27 +21,28 @@ struct TradeHistoryView: View {
                     )
 
                     TradeHistorySummaryBannerView(summaryText: viewModel.summaryText)
+                    
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(viewModel.displayedSections) { section in
+                                Text(verbatim: section.title)
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color(red: 0.57, green: 0.62, blue: 0.71))
+                                    .padding(.top, 18)
+                                    .padding(.bottom, 8)
 
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(viewModel.displayedSections) { section in
-                            Text(verbatim: section.title)
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color(red: 0.57, green: 0.62, blue: 0.71))
-                                .padding(.top, 18)
-                                .padding(.bottom, 8)
-
-                            ForEach(Array(section.transactions.enumerated()), id: \.element.id) { index, transaction in
-                                TradeHistoryTransactionRowView(
-                                    transaction: transaction,
-                                    showsDivider: index < section.transactions.count - 1
-                                )
+                                ForEach(Array(section.transactions.enumerated()), id: \.element.id) { index, transaction in
+                                    TradeHistoryTransactionRowView(
+                                        transaction: transaction,
+                                        showsDivider: index < section.transactions.count - 1
+                                    )
+                                }
                             }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 140)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 140)
                 }
-            }
             .scrollIndicators(.hidden)
 
             TradeHistoryFloatingActionButton(action: viewModel.didTapAddTradeButton)
