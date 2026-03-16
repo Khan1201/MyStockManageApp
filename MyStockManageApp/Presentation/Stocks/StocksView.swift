@@ -59,6 +59,28 @@ struct StocksView: View {
                 selectionAction: viewModel.didSelectTab
             )
         }
+        .fullScreenCover(item: selectedPortfolioStockBinding) { stock in
+            StockDetailsView(
+                viewModel: StockDetailsViewModel(
+                    stock: stock,
+                    dismissAction: viewModel.didDismissPortfolioStockDetails
+                )
+            )
+        }
+    }
+
+    private var selectedPortfolioStockBinding: Binding<PortfolioStock?> {
+        Binding(
+            get: { viewModel.selectedPortfolioStock },
+            set: { stock in
+                guard let stock else {
+                    viewModel.didDismissPortfolioStockDetails()
+                    return
+                }
+
+                viewModel.didSelectPortfolioStock(stock)
+            }
+        )
     }
 }
 

@@ -63,6 +63,10 @@ final class StocksViewModel: ObservableObject {
         selectedPortfolioStock = stock
     }
 
+    func didDismissPortfolioStockDetails() {
+        selectedPortfolioStock = nil
+    }
+
     func didSelectSearchResultStock(_ stock: SearchResultStock) {
         selectedSearchResultStock = stock
     }
