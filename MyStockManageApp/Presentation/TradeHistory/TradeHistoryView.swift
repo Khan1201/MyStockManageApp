@@ -51,11 +51,32 @@ struct TradeHistoryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(.white)
+        .fullScreenCover(item: presentedTradeEditorBinding) { tradeEditorViewModel in
+            TradeEditorView(viewModel: tradeEditorViewModel)
+        }
+        .task {
+            await viewModel.loadTradeHistory()
+        }
+    }
+
+    private var presentedTradeEditorBinding: Binding<TradeEditorViewModel?> {
+        Binding(
+            get: { viewModel.tradeEditorViewModel },
+            set: { tradeEditorViewModel in
+                guard tradeEditorViewModel == nil else {
+                    return
+                }
+
+                viewModel.didDismissTradeEditor()
+            }
+        )
     }
 }
 
 struct TradeHistoryView_Previews: PreviewProvider {
     static var previews: some View {
-        TradeHistoryView(viewModel: TradeHistoryViewModel())
+        TradeHistoryView(
+            viewModel: AppDependencyContainer.preview().makeTradeHistoryViewModel()
+        )
     }
 }

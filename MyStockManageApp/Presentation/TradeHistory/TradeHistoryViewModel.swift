@@ -1,18 +1,26 @@
 import SwiftUI
 
+@MainActor
 final class TradeHistoryViewModel: ObservableObject {
     @Published private(set) var selectedFilter: TradeHistoryFilter
+    @Published private(set) var tradeEditorViewModel: TradeEditorViewModel?
+    @Published private(set) var transactions: [TradeHistoryTransaction]
 
-    private let transactions: [TradeHistoryTransaction]
     private let calendar: Calendar
+    private let fetchTradeHistoryUseCase: FetchTradeHistoryUseCase
+    private let saveTradeUseCase: SaveTradeUseCase
 
     init(
         selectedFilter: TradeHistoryFilter = .all,
-        transactions: [TradeHistoryTransaction] = TradeHistoryViewModel.defaultTransactions,
-        calendar: Calendar = TradeHistoryViewModel.defaultCalendar
+        transactions: [TradeHistoryTransaction] = [],
+        fetchTradeHistoryUseCase: FetchTradeHistoryUseCase = .noop,
+        saveTradeUseCase: SaveTradeUseCase = .noop,
+        calendar: Calendar = tradeHistoryDefaultCalendar
     ) {
         self.selectedFilter = selectedFilter
         self.transactions = transactions
+        self.fetchTradeHistoryUseCase = fetchTradeHistoryUseCase
+        self.saveTradeUseCase = saveTradeUseCase
         self.calendar = calendar
     }
 
@@ -56,7 +64,32 @@ final class TradeHistoryViewModel: ObservableObject {
     }
 
     func didTapAddTradeButton() {
-        // Reserved for the future trade creation flow.
+        guard tradeEditorViewModel == nil else {
+            return
+        }
+
+        tradeEditorViewModel = TradeEditorViewModel(
+            saveTradeUseCase: saveTradeUseCase,
+            onDismiss: { [weak self] in
+                self?.didDismissTradeEditor()
+            },
+            onSave: { [weak self] in
+                await self?.loadTradeHistory()
+            }
+        )
+    }
+
+    func didDismissTradeEditor() {
+        tradeEditorViewModel = nil
+    }
+
+    func loadTradeHistory() async {
+        do {
+            let tradeRecords = try await fetchTradeHistoryUseCase.execute()
+            transactions = tradeRecords.map(TradeHistoryTransaction.init(tradeRecord:))
+        } catch {
+            transactions = []
+        }
     }
 
     private var filteredTransactions: [TradeHistoryTransaction] {
@@ -84,73 +117,28 @@ final class TradeHistoryViewModel: ObservableObject {
 }
 
 extension TradeHistoryViewModel {
-    static let defaultTransactions: [TradeHistoryTransaction] = [
-        TradeHistoryTransaction(
-            symbol: "TSLA",
-            tradedAt: makeDate(year: 2026, month: 3, day: 15),
-            shareCount: 200,
-            transactionType: .buy
-        ),
-        TradeHistoryTransaction(
-            symbol: "AAPL",
-            tradedAt: makeDate(year: 2026, month: 3, day: 10),
-            shareCount: 50,
-            transactionType: .sell
-        ),
-        TradeHistoryTransaction(
-            symbol: "NVDA",
-            tradedAt: makeDate(year: 2026, month: 3, day: 5),
-            shareCount: 100,
-            transactionType: .buy
-        ),
-        TradeHistoryTransaction(
-            symbol: "GOOGL",
-            tradedAt: makeDate(year: 2026, month: 2, day: 28),
-            shareCount: 30,
-            transactionType: .sell
-        ),
-        TradeHistoryTransaction(
-            symbol: "MSFT",
-            tradedAt: makeDate(year: 2026, month: 2, day: 15),
-            shareCount: 80,
-            transactionType: .buy
-        )
-    ]
-
-    static let defaultCalendar: Calendar = {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = Locale(identifier: "en_US_POSIX")
-        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
-        return calendar
-    }()
-
     private static let monthHeaderFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.calendar = defaultCalendar
+        formatter.calendar = tradeHistoryDefaultCalendar
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = defaultCalendar.timeZone
+        formatter.timeZone = tradeHistoryDefaultCalendar.timeZone
         formatter.dateFormat = "LLLL yyyy"
         return formatter
     }()
 
     private static let monthIdentifierFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.calendar = defaultCalendar
+        formatter.calendar = tradeHistoryDefaultCalendar
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = defaultCalendar.timeZone
+        formatter.timeZone = tradeHistoryDefaultCalendar.timeZone
         formatter.dateFormat = "yyyy-MM"
         return formatter
     }()
-
-    private static func makeDate(year: Int, month: Int, day: Int) -> Date {
-        let components = DateComponents(
-            calendar: defaultCalendar,
-            timeZone: defaultCalendar.timeZone,
-            year: year,
-            month: month,
-            day: day
-        )
-
-        return defaultCalendar.date(from: components) ?? .distantPast
-    }
 }
+
+private let tradeHistoryDefaultCalendar: Calendar = {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.locale = Locale(identifier: "en_US_POSIX")
+    calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+    return calendar
+}()

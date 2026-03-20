@@ -6,22 +6,49 @@ struct TradeHistoryTransaction: Identifiable, Equatable {
     let tradedAt: Date
     let shareCount: Int
     let transactionType: TradeHistoryTransactionType
+    let strategy: TradeEditorStrategy
+    let targetPrice: Double?
+    let stopLoss: Double?
+    let reasoning: String
 
     init(
+        id: String? = nil,
         symbol: String,
         tradedAt: Date,
         shareCount: Int,
-        transactionType: TradeHistoryTransactionType
+        transactionType: TradeHistoryTransactionType,
+        strategy: TradeEditorStrategy = .longTerm,
+        targetPrice: Double? = nil,
+        stopLoss: Double? = nil,
+        reasoning: String = ""
     ) {
-        self.id = "\(symbol)-\(Int(tradedAt.timeIntervalSince1970))-\(transactionType.rawValue)"
+        self.id = id ?? "\(symbol)-\(Int(tradedAt.timeIntervalSince1970))-\(transactionType.rawValue)-\(shareCount)"
         self.symbol = symbol
         self.tradedAt = tradedAt
         self.shareCount = shareCount
         self.transactionType = transactionType
+        self.strategy = strategy
+        self.targetPrice = targetPrice
+        self.stopLoss = stopLoss
+        self.reasoning = reasoning
     }
 
     var subtitleText: String {
         "\(Self.tradeDateFormatter.string(from: tradedAt)) · \(shareCount) Shares"
+    }
+
+    init(tradeRecord: TradeRecord) {
+        self.init(
+            id: tradeRecord.id,
+            symbol: tradeRecord.symbol,
+            tradedAt: tradeRecord.tradedAt,
+            shareCount: tradeRecord.shareCount,
+            transactionType: tradeRecord.transactionType,
+            strategy: tradeRecord.strategy,
+            targetPrice: tradeRecord.targetPrice,
+            stopLoss: tradeRecord.stopLoss,
+            reasoning: tradeRecord.reasoning
+        )
     }
 
     private static let tradeDateFormatter: DateFormatter = {

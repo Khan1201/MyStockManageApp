@@ -5,14 +5,17 @@ struct TabContainerView: View {
     @StateObject private var stocksViewModel: StocksViewModel
     @StateObject private var tradeHistoryViewModel: TradeHistoryViewModel
 
+    @MainActor
     init(
         viewModel: TabContainerViewModel = TabContainerViewModel(),
         stocksViewModel: StocksViewModel = StocksViewModel(),
-        tradeHistoryViewModel: TradeHistoryViewModel = TradeHistoryViewModel()
+        tradeHistoryViewModel: TradeHistoryViewModel? = nil
     ) {
         _viewModel = StateObject(wrappedValue: viewModel)
         _stocksViewModel = StateObject(wrappedValue: stocksViewModel)
-        _tradeHistoryViewModel = StateObject(wrappedValue: tradeHistoryViewModel)
+        _tradeHistoryViewModel = StateObject(
+            wrappedValue: tradeHistoryViewModel ?? TradeHistoryViewModel()
+        )
     }
 
     var body: some View {
@@ -46,6 +49,8 @@ struct TabContainerView: View {
 
 struct TabContainerView_Previews: PreviewProvider {
     static var previews: some View {
-        TabContainerView()
+        TabContainerView(
+            tradeHistoryViewModel: AppDependencyContainer.preview().makeTradeHistoryViewModel()
+        )
     }
 }

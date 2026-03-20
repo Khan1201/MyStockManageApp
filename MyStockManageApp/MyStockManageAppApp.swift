@@ -9,9 +9,13 @@ import SwiftUI
 
 @main
 struct MyStockManageAppApp: App {
+    private let appDependencyContainer = AppDependencyContainer()
+
     var body: some Scene {
         WindowGroup {
-            TabContainerView()
+            TabContainerView(
+                tradeHistoryViewModel: appDependencyContainer.makeTradeHistoryViewModel()
+            )
         }
     }
 }

@@ -1,9 +1,12 @@
 import SwiftUI
 
-enum TradeHistoryTransactionType: String, Equatable {
-    case buy
-    case sell
+typealias TradeHistoryTransactionType = TradeTransactionType
 
+extension TradeTransactionType: Identifiable {
+    var id: String { rawValue }
+}
+
+extension TradeTransactionType {
     var badgeTitle: String {
         switch self {
         case .buy:
