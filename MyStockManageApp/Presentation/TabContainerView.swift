@@ -8,7 +8,7 @@ struct TabContainerView: View {
     @MainActor
     init(
         viewModel: TabContainerViewModel = TabContainerViewModel(),
-        stocksViewModel: StocksViewModel = StocksViewModel(),
+        stocksViewModel: StocksViewModel,
         tradeHistoryViewModel: TradeHistoryViewModel? = nil
     ) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -50,6 +50,7 @@ struct TabContainerView: View {
 struct TabContainerView_Previews: PreviewProvider {
     static var previews: some View {
         TabContainerView(
+            stocksViewModel: AppDependencyContainer.preview().makeStocksViewModel(),
             tradeHistoryViewModel: AppDependencyContainer.preview().makeTradeHistoryViewModel()
         )
     }

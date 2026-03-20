@@ -1,7 +1,7 @@
-import SwiftUI
+import Foundation
 
 struct MarketSentimentSection: Identifiable, Equatable {
     let id: String
-    let title: LocalizedStringResource
+    let title: String
     let items: [MarketSentimentItem]
 }

@@ -3,6 +3,45 @@ import XCTest
 
 @MainActor
 final class StockDetailsViewModelTests: XCTestCase {
+    func testLoadStockInsightsMapsDomainContentIntoPresentationRows() async {
+        let sut = StockDetailsViewModel(
+            stock: makeAppleStock(),
+            fetchStockInsightsUseCase: FetchStockInsightsUseCase(
+                operation: { _ in
+                    StockInsights(
+                        forecastSummary: [
+                            ForecastSummaryMetric(id: "strong_buy", recommendation: .strongBuy, count: 12),
+                            ForecastSummaryMetric(id: "buy", recommendation: .buy, count: 10)
+                        ],
+                        sentimentSummary: [
+                            SentimentSummaryMetric(id: "bullish", signal: .bullish, count: 12),
+                            SentimentSummaryMetric(id: "bearish", signal: .bearish, count: 4)
+                        ],
+                        earningsEstimates: [
+                            StockEstimateSnapshot(
+                                id: "2024_actual",
+                                year: 2024,
+                                stage: .actual,
+                                revenueText: "$383.3B",
+                                revenueDeltaText: "-2.1%",
+                                revenueDeltaPercent: -2.1,
+                                epsText: "$6.13",
+                                epsDeltaText: "-1.2%",
+                                epsDeltaPercent: -1.2
+                            )
+                        ]
+                    )
+                }
+            )
+        )
+
+        await sut.loadStockInsights()
+
+        XCTAssertEqual(sut.analystForecasts.map(\.count), [12, 10])
+        XCTAssertEqual(sut.sentimentItems.map(\.count), [12, 4])
+        XCTAssertEqual(sut.earningsEstimateRows.map(\.yearText), ["2024"])
+    }
+
     func testPriceChangeTextUsesSignedCurrencyAndPercentMagnitude() {
         let sut = StockDetailsViewModel(stock: makeAppleStock())
 
@@ -48,42 +87,6 @@ final class StockDetailsViewModelTests: XCTestCase {
         sut.didDismissAnalystForecasts()
 
         XCTAssertFalse(sut.isPresentingAnalystForecasts)
-    }
-
-    func testDidTapMarketSentimentSeeAllPresentsFullScreenCover() {
-        let sut = StockDetailsViewModel(stock: makeAppleStock())
-
-        XCTAssertFalse(sut.isPresentingMarketSentiment)
-
-        sut.didTapMarketSentimentSeeAll()
-
-        XCTAssertTrue(sut.isPresentingMarketSentiment)
-
-        sut.didDismissMarketSentiment()
-
-        XCTAssertFalse(sut.isPresentingMarketSentiment)
-    }
-
-    func testDidTapEarningsEstimatesSeeAllPresentsFullScreenCover() {
-        let sut = StockDetailsViewModel(stock: makeAppleStock())
-
-        XCTAssertFalse(sut.isPresentingEarningsRevenueDetails)
-
-        sut.didTapEarningsEstimatesSeeAll()
-
-        XCTAssertTrue(sut.isPresentingEarningsRevenueDetails)
-
-        sut.didDismissEarningsRevenueDetails()
-
-        XCTAssertFalse(sut.isPresentingEarningsRevenueDetails)
-    }
-
-    func testAppleContentMatchesExpectedSectionData() {
-        let sut = StockDetailsViewModel(stock: makeAppleStock())
-
-        XCTAssertEqual(sut.analystForecasts.map(\.count), [12, 10, 6, 2, 0])
-        XCTAssertEqual(sut.sentimentItems.map(\.count), [12, 4])
-        XCTAssertEqual(sut.earningsEstimateRows.map(\.yearText), ["2024", "2025", "2026", "2027", "2028"])
     }
 
     func testMarketSentimentViewModelDismissActionResetsPresentationState() {

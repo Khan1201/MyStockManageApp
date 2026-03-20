@@ -1,25 +1,18 @@
 import SwiftUI
 
-enum StockLogoStyle: Equatable {
-    case apple
-    case amazon
-    case amd
-    case adobe
-    case microsoft
-    case tesla
-    case nvidia
-    case google
+typealias StockLogoStyle = StockBrand
 
+extension StockLogoStyle {
     var backgroundColor: Color {
         switch self {
         case .apple:
             return Color(red: 0.95, green: 0.87, blue: 0.76)
         case .amazon, .amd, .adobe:
-            return Color.white
+            return .white
         case .microsoft:
-            return Color.white
+            return .white
         case .tesla:
-            return Color.white
+            return .white
         case .nvidia:
             return Color(red: 0.15, green: 0.15, blue: 0.15)
         case .google:
@@ -30,11 +23,11 @@ enum StockLogoStyle: Equatable {
     var borderColor: Color {
         switch self {
         case .apple, .google:
-            return Color.clear
+            return .clear
         case .amazon, .amd, .adobe, .microsoft, .tesla:
             return Color(red: 0.93, green: 0.95, blue: 0.98)
         case .nvidia:
-            return Color.clear
+            return .clear
         }
     }
 }

@@ -1,13 +1,23 @@
 import Foundation
 
-struct PortfolioStock: Identifiable, Equatable {
-    let symbol: String
-    let companyName: String
-    let price: Double
-    let changePercent: Double
-    let logoStyle: StockLogoStyle
+typealias PortfolioStock = Stock
 
-    var id: String { symbol }
+extension PortfolioStock {
+    init(
+        symbol: String,
+        companyName: String,
+        price: Double,
+        changePercent: Double,
+        logoStyle: StockLogoStyle
+    ) {
+        self.init(
+            symbol: symbol,
+            companyName: companyName,
+            price: price,
+            changePercent: changePercent,
+            brand: logoStyle
+        )
+    }
 
     var priceText: String {
         String(format: "$%.2f", price)
@@ -19,5 +29,9 @@ struct PortfolioStock: Identifiable, Equatable {
 
     var changeDirection: StockChangeDirection {
         changePercent >= 0 ? .gain : .loss
+    }
+
+    var logoStyle: StockLogoStyle {
+        brand
     }
 }

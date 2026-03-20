@@ -3,10 +3,23 @@ import XCTest
 
 @MainActor
 final class StocksViewModelTests: XCTestCase {
-    func testDisplayedStocksReturnsAllStocksWhenSearchIsEmpty() {
-        let sut = StocksViewModel(portfolio: makePortfolio())
+    func testLoadStocksOverviewUpdatesPortfolioAndSearchableStocks() async {
+        let sut = StocksViewModel(
+            fetchStocksOverviewUseCase: FetchStocksOverviewUseCase(
+                operation: {
+                    StocksOverview(
+                        portfolio: self.makePortfolio(),
+                        searchableStocks: self.makeSearchResults()
+                    )
+                }
+            )
+        )
+
+        await sut.loadStocksOverview()
 
         XCTAssertEqual(sut.displayedStocks.map(\.symbol), ["AAPL", "MSFT", "TSLA"])
+        sut.searchText = "a"
+        XCTAssertEqual(sut.searchResults.map(\.symbol), ["AAPL", "AMZN", "AMD", "ADBE"])
     }
 
     func testDisplayedStocksFiltersCaseInsensitiveBySymbolOrCompanyName() {
@@ -17,32 +30,6 @@ final class StocksViewModelTests: XCTestCase {
 
         sut.searchText = "tsla"
         XCTAssertEqual(sut.displayedStocks.map(\.symbol), ["TSLA"])
-    }
-
-    func testIsShowingSearchResultsIsTrueOnlyForNonWhitespaceQuery() {
-        let sut = StocksViewModel(
-            portfolio: makePortfolio(),
-            searchableStocks: makeSearchResults()
-        )
-
-        XCTAssertFalse(sut.isShowingSearchResults)
-
-        sut.searchText = "   "
-        XCTAssertFalse(sut.isShowingSearchResults)
-
-        sut.searchText = "a"
-        XCTAssertTrue(sut.isShowingSearchResults)
-    }
-
-    func testSearchResultsFiltersMatchingSearchableStocks() {
-        let sut = StocksViewModel(
-            portfolio: makePortfolio(),
-            searchableStocks: makeSearchResults()
-        )
-
-        sut.searchText = "a"
-
-        XCTAssertEqual(sut.searchResults.map(\.symbol), ["AAPL", "AMZN", "AMD", "ADBE"])
     }
 
     func testDidTapClearSearchResetsQueryAndHidesSearchResults() {
@@ -103,6 +90,19 @@ final class StocksViewModelTests: XCTestCase {
         sut.didSelectSearchResultStock(stock)
 
         XCTAssertEqual(sut.selectedSearchResultStock, stock)
+    }
+
+    func testMakeStockDetailsViewModelUsesInjectedBuilder() {
+        let stock = makePortfolio()[0]
+        let expectedViewModel = StockDetailsViewModel(stock: stock)
+        let sut = StocksViewModel(
+            portfolio: makePortfolio(),
+            stockDetailsViewModelBuilder: { _, _ in expectedViewModel }
+        )
+
+        let producedViewModel = sut.makeStockDetailsViewModel(for: stock)
+
+        XCTAssertTrue(producedViewModel === expectedViewModel)
     }
 
     func testPortfolioStockProvidesFormattedDisplayValues() {

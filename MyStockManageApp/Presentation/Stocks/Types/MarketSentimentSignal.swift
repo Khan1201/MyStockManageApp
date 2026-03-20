@@ -1,9 +1,8 @@
 import SwiftUI
 
-enum MarketSentimentSignal: Equatable {
-    case bullish
-    case bearish
+typealias MarketSentimentSignal = StockMarketSignal
 
+extension MarketSentimentSignal {
     var title: LocalizedStringResource {
         switch self {
         case .bullish:

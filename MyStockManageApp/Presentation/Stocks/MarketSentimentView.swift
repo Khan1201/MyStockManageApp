@@ -35,6 +35,9 @@ struct MarketSentimentView: View {
             }
         }
         .background(Self.backgroundColor.ignoresSafeArea())
+        .task {
+            await viewModel.loadMarketSentiment()
+        }
     }
 
     private static let backgroundColor = Color.white

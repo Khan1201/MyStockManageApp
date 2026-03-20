@@ -1,9 +1,17 @@
 import Foundation
 
-struct SearchResultStock: Identifiable, Equatable {
-    let symbol: String
-    let companyName: String
-    let logoStyle: StockLogoStyle
+typealias SearchResultStock = StockSearchResult
 
-    var id: String { symbol }
+extension SearchResultStock {
+    init(
+        symbol: String,
+        companyName: String,
+        logoStyle: StockLogoStyle
+    ) {
+        self.init(symbol: symbol, companyName: companyName, brand: logoStyle)
+    }
+
+    var logoStyle: StockLogoStyle {
+        brand
+    }
 }

@@ -63,6 +63,9 @@ struct EarningsRevenueDetailsView: View {
             }
         }
         .background(Self.backgroundColor.ignoresSafeArea())
+        .task {
+            await viewModel.loadEarningsRevenue()
+        }
     }
 
     private static let backgroundColor = Color(red: 0.97, green: 0.96, blue: 0.95)

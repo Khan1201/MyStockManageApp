@@ -9,8 +9,8 @@ struct StocksView: View {
     private static let cancelTitle: LocalizedStringResource = "Cancel"
     
     @ObservedObject var viewModel: StocksViewModel
-    
-    init(viewModel: StocksViewModel = StocksViewModel()) {
+
+    init(viewModel: StocksViewModel) {
         self.viewModel = viewModel
     }
     
@@ -55,11 +55,11 @@ struct StocksView: View {
         .accessibilityIdentifier("stocks_root_view")
         .fullScreenCover(item: selectedPortfolioStockBinding) { stock in
             StockDetailsView(
-                viewModel: StockDetailsViewModel(
-                    stock: stock,
-                    dismissAction: viewModel.didDismissPortfolioStockDetails
-                )
+                viewModel: viewModel.makeStockDetailsViewModel(for: stock)
             )
+        }
+        .task {
+            await viewModel.loadStocksOverview()
         }
     }
 
@@ -80,6 +80,6 @@ struct StocksView: View {
 
 struct StocksView_Previews: PreviewProvider {
     static var previews: some View {
-        StocksView()
+        StocksView(viewModel: AppDependencyContainer.preview().makeStocksViewModel())
     }
 }

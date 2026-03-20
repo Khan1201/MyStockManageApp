@@ -28,7 +28,7 @@ struct AnalystForecastRowView: View {
                     Text(verbatim: "-")
                         .foregroundStyle(Self.secondaryColor)
 
-                    Text(item.ratingText)
+                    Text(verbatim: item.ratingText)
                         .foregroundStyle(item.ratingColor)
 
                     Image(systemName: "star.fill")

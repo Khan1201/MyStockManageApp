@@ -80,6 +80,9 @@ struct StockDetailsView: View {
         .fullScreenCover(isPresented: earningsRevenueDetailsPresentedBinding) {
             EarningsRevenueDetailsView(viewModel: viewModel.earningsRevenueDetailsViewModel)
         }
+        .task {
+            await viewModel.loadStockInsights()
+        }
     }
 
     private static let backgroundColor = Color(red: 0.96, green: 0.94, blue: 0.93)
@@ -127,7 +130,7 @@ struct StockDetailsView: View {
 struct StockDetailsView_Previews: PreviewProvider {
     static var previews: some View {
         StockDetailsView(
-            viewModel: StockDetailsViewModel(
+            viewModel: AppDependencyContainer.preview().makeStockDetailsViewModel(
                 stock: PortfolioStock(
                     symbol: "AAPL",
                     companyName: "Apple Inc.",

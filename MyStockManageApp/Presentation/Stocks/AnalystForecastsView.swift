@@ -55,6 +55,9 @@ struct AnalystForecastsView: View {
             }
         }
         .background(Self.backgroundColor.ignoresSafeArea())
+        .task {
+            await viewModel.loadAnalystForecasts()
+        }
     }
 
     private static let backgroundColor = Color(red: 0.96, green: 0.94, blue: 0.93)

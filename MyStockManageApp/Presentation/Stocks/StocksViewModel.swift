@@ -1,25 +1,34 @@
 import SwiftUI
 
+@MainActor
 final class StocksViewModel: ObservableObject {
     @Published var searchText = ""
     @Published private(set) var isEditingPortfolio = false
     @Published private(set) var selectedPortfolioStock: PortfolioStock?
     @Published private(set) var selectedSearchResultStock: SearchResultStock?
+    @Published private(set) var portfolio: [PortfolioStock]
+    @Published private(set) var searchableStocks: [SearchResultStock]
 
-    private let portfolio: [PortfolioStock]
-    private let searchableStocks: [SearchResultStock]
+    private let fetchStocksOverviewUseCase: FetchStocksOverviewUseCase
+    private let stockDetailsViewModelBuilder: (PortfolioStock, @escaping () -> Void) -> StockDetailsViewModel
 
     init(
-        portfolio: [PortfolioStock] = StocksViewModel.defaultPortfolio,
-        searchableStocks: [SearchResultStock] = StocksViewModel.defaultSearchableStocks
+        portfolio: [PortfolioStock] = [],
+        searchableStocks: [SearchResultStock] = [],
+        fetchStocksOverviewUseCase: FetchStocksOverviewUseCase = .noop,
+        stockDetailsViewModelBuilder: ((PortfolioStock, @escaping () -> Void) -> StockDetailsViewModel)? = nil
     ) {
         self.portfolio = portfolio
         self.searchableStocks = searchableStocks
+        self.fetchStocksOverviewUseCase = fetchStocksOverviewUseCase
+        self.stockDetailsViewModelBuilder = stockDetailsViewModelBuilder ?? { stock, dismissAction in
+            StockDetailsViewModel(stock: stock, dismissAction: dismissAction)
+        }
     }
 
     var displayedStocks: [PortfolioStock] {
         let trimmedQuery = normalizedSearchText
-        guard trimmedQuery.isEmpty == false else {
+        guard !trimmedQuery.isEmpty else {
             return portfolio
         }
 
@@ -31,7 +40,7 @@ final class StocksViewModel: ObservableObject {
     }
 
     var isShowingSearchResults: Bool {
-        normalizedSearchText.isEmpty == false
+        !normalizedSearchText.isEmpty
     }
 
     var searchResults: [SearchResultStock] {
@@ -43,6 +52,17 @@ final class StocksViewModel: ObservableObject {
         return searchableStocks.filter { stock in
             stock.symbol.localizedLowercase.contains(query) ||
             stock.companyName.localizedLowercase.contains(query)
+        }
+    }
+
+    func loadStocksOverview() async {
+        do {
+            let overview = try await fetchStocksOverviewUseCase.execute()
+            portfolio = overview.portfolio
+            searchableStocks = overview.searchableStocks
+        } catch {
+            portfolio = []
+            searchableStocks = []
         }
     }
 
@@ -66,70 +86,13 @@ final class StocksViewModel: ObservableObject {
         selectedSearchResultStock = stock
     }
 
+    func makeStockDetailsViewModel(for stock: PortfolioStock) -> StockDetailsViewModel {
+        stockDetailsViewModelBuilder(stock) { [weak self] in
+            self?.didDismissPortfolioStockDetails()
+        }
+    }
+
     private var normalizedSearchText: String {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-}
-
-extension StocksViewModel {
-    static let defaultPortfolio: [PortfolioStock] = [
-        PortfolioStock(
-            symbol: "AAPL",
-            companyName: "Apple Inc.",
-            price: 189.43,
-            changePercent: 1.24,
-            logoStyle: .apple
-        ),
-        PortfolioStock(
-            symbol: "MSFT",
-            companyName: "Microsoft Corp",
-            price: 415.32,
-            changePercent: -0.45,
-            logoStyle: .microsoft
-        ),
-        PortfolioStock(
-            symbol: "TSLA",
-            companyName: "Tesla, Inc.",
-            price: 175.22,
-            changePercent: 2.15,
-            logoStyle: .tesla
-        ),
-        PortfolioStock(
-            symbol: "NVDA",
-            companyName: "NVIDIA Corp",
-            price: 875.28,
-            changePercent: 0.82,
-            logoStyle: .nvidia
-        ),
-        PortfolioStock(
-            symbol: "GOOGL",
-            companyName: "Alphabet Inc.",
-            price: 142.65,
-            changePercent: -1.12,
-            logoStyle: .google
-        )
-    ]
-
-    static let defaultSearchableStocks: [SearchResultStock] = [
-        SearchResultStock(
-            symbol: "AAPL",
-            companyName: "Apple Inc.",
-            logoStyle: .apple
-        ),
-        SearchResultStock(
-            symbol: "AMZN",
-            companyName: "Amazon.com, Inc.",
-            logoStyle: .amazon
-        ),
-        SearchResultStock(
-            symbol: "AMD",
-            companyName: "Advanced Micro Devices, Inc.",
-            logoStyle: .amd
-        ),
-        SearchResultStock(
-            symbol: "ADBE",
-            companyName: "Adobe Inc.",
-            logoStyle: .adobe
-        )
-    ]
 }

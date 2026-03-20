@@ -4,7 +4,7 @@ struct AnalystForecastDetailItem: Identifiable {
     let id: String
     let firmName: String
     let analystName: String
-    let ratingText: LocalizedStringResource
+    let ratingText: String
     let ratingColor: Color
     let scoreText: String
     let dateText: String

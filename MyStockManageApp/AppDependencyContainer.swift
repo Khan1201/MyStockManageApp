@@ -4,10 +4,17 @@ final class AppDependencyContainer {
     private let tradeHistoryPersistentStorage: TradeHistoryPersistentStorage
     private let fetchTradeHistoryUseCase: FetchTradeHistoryUseCase
     private let saveTradeUseCase: SaveTradeUseCase
+    private let fetchStocksOverviewUseCase: FetchStocksOverviewUseCase
+    private let fetchStockInsightsUseCase: FetchStockInsightsUseCase
+    private let fetchAnalystForecastsUseCase: FetchAnalystForecastsUseCase
+    private let fetchMarketSentimentUseCase: FetchMarketSentimentUseCase
+    private let fetchEarningsRevenueUseCase: FetchEarningsRevenueUseCase
 
     init(
         tradeHistoryPersistentStorage: TradeHistoryPersistentStorage = TradeHistoryPersistentStorage(),
-        tradeHistoryRemoteDataSource: any TradeHistoryRemoteDataSource = TradeHistorySeedRemoteDataSource()
+        tradeHistoryRemoteDataSource: any TradeHistoryRemoteDataSource = TradeHistorySeedRemoteDataSource(),
+        stocksLocalDataSource: any StocksLocalDataSource = InMemoryStocksLocalDataSource(),
+        stocksRemoteDataSource: any StocksRemoteDataSource = StocksSeedRemoteDataSource()
     ) {
         self.tradeHistoryPersistentStorage = tradeHistoryPersistentStorage
 
@@ -21,6 +28,49 @@ final class AppDependencyContainer {
 
         fetchTradeHistoryUseCase = FetchTradeHistoryUseCase(repository: tradeHistoryRepository)
         saveTradeUseCase = SaveTradeUseCase(repository: tradeHistoryRepository)
+
+        let stocksRepository = StocksRepositoryImpl(
+            localDataSource: stocksLocalDataSource,
+            remoteDataSource: stocksRemoteDataSource
+        )
+
+        fetchStocksOverviewUseCase = FetchStocksOverviewUseCase(repository: stocksRepository)
+        fetchStockInsightsUseCase = FetchStockInsightsUseCase(repository: stocksRepository)
+        fetchAnalystForecastsUseCase = FetchAnalystForecastsUseCase(repository: stocksRepository)
+        fetchMarketSentimentUseCase = FetchMarketSentimentUseCase(repository: stocksRepository)
+        fetchEarningsRevenueUseCase = FetchEarningsRevenueUseCase(repository: stocksRepository)
+    }
+
+    @MainActor
+    func makeStocksViewModel() -> StocksViewModel {
+        StocksViewModel(
+            fetchStocksOverviewUseCase: fetchStocksOverviewUseCase,
+            stockDetailsViewModelBuilder: { [weak self] stock, dismissAction in
+                guard let self else {
+                    return StockDetailsViewModel(stock: stock, dismissAction: dismissAction)
+                }
+
+                return self.makeStockDetailsViewModel(
+                    stock: stock,
+                    dismissAction: dismissAction
+                )
+            }
+        )
+    }
+
+    @MainActor
+    func makeStockDetailsViewModel(
+        stock: PortfolioStock,
+        dismissAction: @escaping () -> Void = {}
+    ) -> StockDetailsViewModel {
+        StockDetailsViewModel(
+            stock: stock,
+            fetchStockInsightsUseCase: fetchStockInsightsUseCase,
+            fetchAnalystForecastsUseCase: fetchAnalystForecastsUseCase,
+            fetchMarketSentimentUseCase: fetchMarketSentimentUseCase,
+            fetchEarningsRevenueUseCase: fetchEarningsRevenueUseCase,
+            dismissAction: dismissAction
+        )
     }
 
     @MainActor

@@ -14,6 +14,7 @@ struct MyStockManageAppApp: App {
     var body: some Scene {
         WindowGroup {
             TabContainerView(
+                stocksViewModel: appDependencyContainer.makeStocksViewModel(),
                 tradeHistoryViewModel: appDependencyContainer.makeTradeHistoryViewModel()
             )
         }

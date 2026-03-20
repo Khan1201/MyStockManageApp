@@ -1,11 +1,8 @@
 import SwiftUI
 
-enum EarningsRevenueQuarterState: Equatable {
-    case beat
-    case partialMiss
-    case miss
-    case projected
+typealias EarningsRevenueQuarterState = EarningsQuarterState
 
+extension EarningsRevenueQuarterState {
     var accentColor: Color? {
         switch self {
         case .beat:
