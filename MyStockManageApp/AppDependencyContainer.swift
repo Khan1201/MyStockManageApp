@@ -13,8 +13,7 @@ final class AppDependencyContainer {
     init(
         tradeHistoryPersistentStorage: TradeHistoryPersistentStorage = TradeHistoryPersistentStorage(),
         tradeHistoryRemoteDataSource: any TradeHistoryRemoteDataSource = TradeHistorySeedRemoteDataSource(),
-        stocksLocalDataSource: any StocksLocalDataSource = InMemoryStocksLocalDataSource(),
-        stocksRemoteDataSource: any StocksRemoteDataSource = StocksSeedRemoteDataSource()
+        stocksRemoteDataSource: any StocksRemoteDataSource = StocksFinnhubRemoteDataSource()
     ) {
         self.tradeHistoryPersistentStorage = tradeHistoryPersistentStorage
 
@@ -30,7 +29,6 @@ final class AppDependencyContainer {
         saveTradeUseCase = SaveTradeUseCase(repository: tradeHistoryRepository)
 
         let stocksRepository = StocksRepositoryImpl(
-            localDataSource: stocksLocalDataSource,
             remoteDataSource: stocksRemoteDataSource
         )
 

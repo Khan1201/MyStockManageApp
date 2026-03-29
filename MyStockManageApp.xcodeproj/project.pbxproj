@@ -27,6 +27,7 @@
 		BCCFF84A2F5C13B100300BD9 /* MyStockManageApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MyStockManageApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BCCFF8582F5C13B200300BD9 /* MyStockManageAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MyStockManageAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		BCCFF8622F5C13B200300BD9 /* MyStockManageAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MyStockManageAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0A1F1A12B3C4D5E6F700011 /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -88,6 +89,7 @@
 		BCCFF8412F5C13B100300BD9 = {
 			isa = PBXGroup;
 			children = (
+				C0A1F1A12B3C4D5E6F700010 /* Config */,
 				BCCFF84C2F5C13B100300BD9 /* MyStockManageApp */,
 				BCCFF85B2F5C13B200300BD9 /* MyStockManageAppTests */,
 				BCCFF8652F5C13B200300BD9 /* MyStockManageAppUITests */,
@@ -103,6 +105,14 @@
 				BCCFF8622F5C13B200300BD9 /* MyStockManageAppUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		C0A1F1A12B3C4D5E6F700010 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				C0A1F1A12B3C4D5E6F700011 /* App.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -404,6 +414,7 @@
 		};
 		BCCFF86D2F5C13B200300BD9 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0A1F1A12B3C4D5E6F700011 /* App.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -438,6 +449,7 @@
 		};
 		BCCFF86E2F5C13B200300BD9 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0A1F1A12B3C4D5E6F700011 /* App.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

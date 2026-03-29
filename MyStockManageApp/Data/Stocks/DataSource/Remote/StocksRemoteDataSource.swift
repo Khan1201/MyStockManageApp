@@ -1,9 +1,28 @@
 import Foundation
 
+typealias PortfolioStockRemotePayload = (quote: FinnhubQuoteDTO, profile: FinnhubProfileDTO?)
+typealias StockInsightsRemotePayload = (
+    recommendations: [FinnhubRecommendationDTO],
+    articles: [FinnhubNewsDTO],
+    annualReports: [FinnhubFinancialReportDTO],
+    quarterlyReports: [FinnhubFinancialReportDTO],
+    earningsHistory: [FinnhubEarningsHistoryDTO],
+    earningsCalendar: [FinnhubEarningsCalendarDTO]
+)
+typealias AnalystForecastsRemotePayload = (
+    recommendations: [FinnhubRecommendationDTO],
+    priceTarget: FinnhubPriceTargetDTO
+)
+typealias EarningsRevenueRemotePayload = (
+    quarterlyReports: [FinnhubFinancialReportDTO],
+    earningsHistory: [FinnhubEarningsHistoryDTO],
+    earningsCalendar: [FinnhubEarningsCalendarDTO]
+)
+
 protocol StocksRemoteDataSource {
-    func fetchStocksOverview() async throws -> StocksOverviewDTO
-    func fetchStockInsights(for stock: StockDTO) async throws -> StockInsightsDTO
-    func fetchAnalystForecasts(for stock: StockDTO) async throws -> AnalystForecastsContentDTO
-    func fetchMarketSentiment(for stock: StockDTO) async throws -> [SentimentSectionDTO]
-    func fetchEarningsRevenue(for stock: StockDTO) async throws -> [EarningsYearRecordDTO]
+    func fetchStocksOverview() async throws -> [PortfolioStockRemotePayload]
+    func fetchStockInsights(for stock: Stock) async throws -> StockInsightsRemotePayload
+    func fetchAnalystForecasts(for stock: Stock) async throws -> AnalystForecastsRemotePayload
+    func fetchMarketSentiment(for stock: Stock) async throws -> [FinnhubNewsDTO]
+    func fetchEarningsRevenue(for stock: Stock) async throws -> EarningsRevenueRemotePayload
 }

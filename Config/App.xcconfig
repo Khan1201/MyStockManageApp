@@ -1,0 +1,2 @@
+// App-level secrets bridge. Keep real keys in Secrets.xcconfig, which is ignored by git.
+#include? "Secrets.xcconfig"

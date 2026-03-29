@@ -2,78 +2,152 @@ import XCTest
 @testable import MyStockManageApp
 
 final class StocksRepositoryImplTests: XCTestCase {
-    func testFetchStocksOverviewLoadsRemoteDataWhenLocalCacheIsEmptyAndCachesIt() async throws {
-        let localDataSource = InMemoryStocksLocalDataSource()
-        let remoteOverview = StocksOverviewDTO(
-            portfolio: [
-                .init(symbol: "AAPL", companyName: "Apple Inc.", price: 189.43, changePercent: 1.24, brandRawValue: StockBrand.apple.rawValue)
-            ],
-            searchableStocks: [
-                .init(symbol: "AMD", companyName: "Advanced Micro Devices, Inc.", brandRawValue: StockBrand.amd.rawValue)
-            ]
-        )
-        let repository = StocksRepositoryImpl(
-            localDataSource: localDataSource,
-            remoteDataSource: StocksRemoteDataSourceStub(overview: remoteOverview)
-        )
+    func testFetchStocksOverviewLoadsRemoteData() async throws {
+        let remoteOverview: [PortfolioStockRemotePayload] = [
+            (quote: .init(c: 189.43, dp: 1.24), profile: .init(name: "Apple Inc."))
+        ]
+        let repository = StocksRepositoryImpl(remoteDataSource: StocksRemoteDataSourceStub(overview: remoteOverview))
 
         let overview = try await repository.fetchStocksOverview()
-        let cachedOverview = try await localDataSource.fetchStocksOverview()
 
         XCTAssertEqual(overview.portfolio.map(\.symbol), ["AAPL"])
-        XCTAssertEqual(overview.searchableStocks.map(\.symbol), ["AMD"])
-        XCTAssertEqual(cachedOverview, remoteOverview)
+        XCTAssertEqual(
+            overview.searchableStocks.map(\.symbol),
+            StocksFinnhubTransformer.searchableDescriptors.map(\.symbol)
+        )
     }
 
-    func testFetchStockInsightsLoadsRemoteDataWhenLocalCacheIsEmptyAndCachesIt() async throws {
-        let localDataSource = InMemoryStocksLocalDataSource()
-        let remoteInsights = StockInsightsDTO(
-            forecastSummary: [.init(id: "buy", recommendationRawValue: AnalystRecommendation.buy.rawValue, count: 10)],
-            sentimentSummary: [.init(id: "bullish", signalRawValue: StockMarketSignal.bullish.rawValue, count: 3)],
-            earningsEstimates: [.init(id: "2026_est", year: 2026, stageRawValue: EstimateStage.estimated.rawValue, revenueText: "$100.0B", revenueDeltaText: nil, revenueDeltaPercent: nil, epsText: "$3.50", epsDeltaText: nil, epsDeltaPercent: nil)]
+    func testFetchStockInsightsLoadsRemoteData() async throws {
+        let remoteInsights: StockInsightsRemotePayload = (
+            recommendations: [
+                .init(buy: 10, hold: 0, period: "2026-03-01", sell: 0, strongBuy: 0, strongSell: 0)
+            ],
+            articles: [
+                .init(
+                    datetime: 1_774_751_400,
+                    headline: "Tesla shares surge after strong outlook",
+                    id: 1,
+                    source: "Bloomberg",
+                    summary: "Bullish growth momentum improves expectations."
+                )
+            ],
+            annualReports: [],
+            quarterlyReports: [],
+            earningsHistory: [],
+            earningsCalendar: []
         )
-        let repository = StocksRepositoryImpl(
-            localDataSource: localDataSource,
-            remoteDataSource: StocksRemoteDataSourceStub(stockInsights: remoteInsights)
-        )
+        let repository = StocksRepositoryImpl(remoteDataSource: StocksRemoteDataSourceStub(stockInsights: remoteInsights))
         let stock = Stock(symbol: "TSLA", companyName: "Tesla, Inc.", price: 175.22, changePercent: 2.15, brand: .tesla)
 
         let insights = try await repository.fetchStockInsights(for: stock)
-        let cachedInsights = try await localDataSource.fetchStockInsights(symbol: "TSLA")
 
-        XCTAssertEqual(insights.forecastSummary.first?.count, 10)
-        XCTAssertEqual(insights.sentimentSummary.first?.count, 3)
-        XCTAssertEqual(cachedInsights, remoteInsights)
+        XCTAssertEqual(
+            insights.forecastSummary.first(where: { $0.recommendation == .buy })?.count,
+            10
+        )
+        XCTAssertEqual(insights.sentimentSummary.first?.count, 1)
+    }
+
+    func testFetchStocksOverviewRequestsRemoteDataOnEveryCall() async throws {
+        let remoteDataSource = CountingStocksRemoteDataSource(
+            overview: [(quote: .init(c: 189.43, dp: 1.24), profile: .init(name: "Apple Inc."))]
+        )
+        let repository = StocksRepositoryImpl(remoteDataSource: remoteDataSource)
+
+        _ = try await repository.fetchStocksOverview()
+        _ = try await repository.fetchStocksOverview()
+
+        let overviewFetchCount = await remoteDataSource.overviewFetchCountSnapshot()
+        XCTAssertEqual(overviewFetchCount, 2)
     }
 }
 
 private struct StocksRemoteDataSourceStub: StocksRemoteDataSource {
-    var overview: StocksOverviewDTO = StocksOverviewDTO(portfolio: [], searchableStocks: [])
-    var stockInsights: StockInsightsDTO = StockInsightsDTO(forecastSummary: [], sentimentSummary: [], earningsEstimates: [])
-    var analystForecasts: AnalystForecastsContentDTO = AnalystForecastsContentDTO(
-        overview: .init(averageTarget: 0, consensusRawValue: AnalystRecommendation.neutral.rawValue, analystsCount: 0),
-        forecasts: []
+    var overview: [PortfolioStockRemotePayload] = []
+    var stockInsights: StockInsightsRemotePayload = (
+        recommendations: [],
+        articles: [],
+        annualReports: [],
+        quarterlyReports: [],
+        earningsHistory: [],
+        earningsCalendar: []
     )
-    var marketSentiment: [SentimentSectionDTO] = []
-    var earningsRevenue: [EarningsYearRecordDTO] = []
+    var analystForecasts: AnalystForecastsRemotePayload = (
+        recommendations: [],
+        priceTarget: .init(targetHigh: nil, targetLow: nil, targetMean: nil, targetMedian: nil)
+    )
+    var marketSentiment: [FinnhubNewsDTO] = []
+    var earningsRevenue: EarningsRevenueRemotePayload = (
+        quarterlyReports: [],
+        earningsHistory: [],
+        earningsCalendar: []
+    )
 
-    func fetchStocksOverview() async throws -> StocksOverviewDTO {
+    func fetchStocksOverview() async throws -> [PortfolioStockRemotePayload] {
         overview
     }
 
-    func fetchStockInsights(for _: StockDTO) async throws -> StockInsightsDTO {
+    func fetchStockInsights(for _: Stock) async throws -> StockInsightsRemotePayload {
         stockInsights
     }
 
-    func fetchAnalystForecasts(for _: StockDTO) async throws -> AnalystForecastsContentDTO {
+    func fetchAnalystForecasts(for _: Stock) async throws -> AnalystForecastsRemotePayload {
         analystForecasts
     }
 
-    func fetchMarketSentiment(for _: StockDTO) async throws -> [SentimentSectionDTO] {
+    func fetchMarketSentiment(for _: Stock) async throws -> [FinnhubNewsDTO] {
         marketSentiment
     }
 
-    func fetchEarningsRevenue(for _: StockDTO) async throws -> [EarningsYearRecordDTO] {
+    func fetchEarningsRevenue(for _: Stock) async throws -> EarningsRevenueRemotePayload {
         earningsRevenue
+    }
+}
+
+private actor CountingStocksRemoteDataSource: StocksRemoteDataSource {
+    private(set) var overviewFetchCount = 0
+    let overview: [PortfolioStockRemotePayload]
+
+    init(overview: [PortfolioStockRemotePayload]) {
+        self.overview = overview
+    }
+
+    func fetchStocksOverview() async throws -> [PortfolioStockRemotePayload] {
+        overviewFetchCount += 1
+        return overview
+    }
+
+    func fetchStockInsights(for _: Stock) async throws -> StockInsightsRemotePayload {
+        (
+            recommendations: [],
+            articles: [],
+            annualReports: [],
+            quarterlyReports: [],
+            earningsHistory: [],
+            earningsCalendar: []
+        )
+    }
+
+    func fetchAnalystForecasts(for _: Stock) async throws -> AnalystForecastsRemotePayload {
+        (
+            recommendations: [],
+            priceTarget: .init(targetHigh: nil, targetLow: nil, targetMean: nil, targetMedian: nil)
+        )
+    }
+
+    func fetchMarketSentiment(for _: Stock) async throws -> [FinnhubNewsDTO] {
+        []
+    }
+
+    func fetchEarningsRevenue(for _: Stock) async throws -> EarningsRevenueRemotePayload {
+        (
+            quarterlyReports: [],
+            earningsHistory: [],
+            earningsCalendar: []
+        )
+    }
+
+    func overviewFetchCountSnapshot() -> Int {
+        overviewFetchCount
     }
 }
