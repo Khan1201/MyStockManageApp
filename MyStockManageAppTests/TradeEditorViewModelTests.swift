@@ -4,7 +4,7 @@ import XCTest
 @MainActor
 final class TradeEditorViewModelTests: XCTestCase {
     func testCanSaveRequiresNonEmptySymbol() {
-        let sut = TradeEditorViewModel(onDismiss: {}, onSave: {})
+        let sut = TradeEditorViewModel(onDismiss: {}, onSave: { _ in })
 
         XCTAssertFalse(sut.canSave)
 
@@ -14,7 +14,7 @@ final class TradeEditorViewModelTests: XCTestCase {
     }
 
     func testDidChangeQuantityTextFiltersNonNumericCharacters() {
-        let sut = TradeEditorViewModel(symbol: "TSLA", quantity: 0, onDismiss: {}, onSave: {})
+        let sut = TradeEditorViewModel(symbol: "TSLA", quantity: 0, onDismiss: {}, onSave: { _ in })
 
         sut.didChangeQuantityText("12ab3-4")
 
@@ -43,7 +43,7 @@ final class TradeEditorViewModelTests: XCTestCase {
             onDismiss: {
                 dismissCount += 1
             },
-            onSave: {
+            onSave: { _ in
                 saveCompletionCount += 1
             }
         )
@@ -79,7 +79,7 @@ final class TradeEditorViewModelTests: XCTestCase {
             onDismiss: {
                 dismissCount += 1
             },
-            onSave: {
+            onSave: { _ in
                 saveCount += 1
             }
         )
@@ -105,7 +105,7 @@ final class TradeEditorViewModelTests: XCTestCase {
     }
 
     func testThemeBasedStrategyShowsConditionalFields() {
-        let sut = TradeEditorViewModel(onDismiss: {}, onSave: {})
+        let sut = TradeEditorViewModel(onDismiss: {}, onSave: { _ in })
 
         XCTAssertFalse(sut.shouldShowThemeBasedFields)
 
@@ -115,13 +115,58 @@ final class TradeEditorViewModelTests: XCTestCase {
     }
 
     func testDidChangePriceTextsFiltersDecimalInput() {
-        let sut = TradeEditorViewModel(onDismiss: {}, onSave: {})
+        let sut = TradeEditorViewModel(onDismiss: {}, onSave: { _ in })
 
         sut.didChangeTargetPriceText("25a0.345")
         sut.didChangeStopLossText("$15..987")
 
         XCTAssertEqual(sut.targetPriceText, "250.34")
         XCTAssertEqual(sut.stopLossText, "15.98")
+    }
+
+    func testDidTapSaveButtonUsesProvidedTradeID() async {
+        let saveSpy = TradeRecordSaveSpy()
+        let sut = TradeEditorViewModel(
+            tradeID: "existing-trade-id",
+            symbol: "TSLA",
+            quantity: 10,
+            saveTradeUseCase: SaveTradeUseCase(
+                operation: { trade in
+                    await saveSpy.save(trade)
+                }
+            ),
+            onDismiss: {},
+            onSave: { _ in }
+        )
+
+        await sut.didTapSaveButton()
+
+        let savedTrade = await saveSpy.lastTrade
+        XCTAssertEqual(savedTrade?.id, "existing-trade-id")
+    }
+
+    func testDidTapSaveButtonOmitsTargetPriceAndStopLossForLongTermStrategy() async {
+        let saveSpy = TradeRecordSaveSpy()
+        let sut = TradeEditorViewModel(
+            symbol: "TSLA",
+            quantity: 10,
+            strategy: .longTerm,
+            targetPriceText: "250",
+            stopLossText: "150",
+            saveTradeUseCase: SaveTradeUseCase(
+                operation: { trade in
+                    await saveSpy.save(trade)
+                }
+            ),
+            onDismiss: {},
+            onSave: { _ in }
+        )
+
+        await sut.didTapSaveButton()
+
+        let savedTrade = await saveSpy.lastTrade
+        XCTAssertNil(savedTrade?.targetPrice)
+        XCTAssertNil(savedTrade?.stopLoss)
     }
 
     private func makeDate(year: Int, month: Int, day: Int) -> Date {

@@ -3,6 +3,7 @@ import SwiftUI
 @MainActor
 final class TradeHistoryViewModel: ObservableObject {
     @Published private(set) var selectedFilter: TradeHistoryFilter
+    @Published private(set) var tradeDetailsViewModel: TradeDetailsViewModel?
     @Published private(set) var tradeEditorViewModel: TradeEditorViewModel?
     @Published private(set) var transactions: [TradeHistoryTransaction]
 
@@ -64,7 +65,7 @@ final class TradeHistoryViewModel: ObservableObject {
     }
 
     func didTapAddTradeButton() {
-        guard tradeEditorViewModel == nil else {
+        guard tradeDetailsViewModel == nil, tradeEditorViewModel == nil else {
             return
         }
 
@@ -73,10 +74,31 @@ final class TradeHistoryViewModel: ObservableObject {
             onDismiss: { [weak self] in
                 self?.didDismissTradeEditor()
             },
-            onSave: { [weak self] in
+            onSave: { [weak self] _ in
                 await self?.loadTradeHistory()
             }
         )
+    }
+
+    func didSelectTransaction(_ transaction: TradeHistoryTransaction) {
+        guard tradeDetailsViewModel == nil, tradeEditorViewModel == nil else {
+            return
+        }
+
+        tradeDetailsViewModel = TradeDetailsViewModel(
+            transaction: transaction,
+            saveTradeUseCase: saveTradeUseCase,
+            onDismiss: { [weak self] in
+                self?.didDismissTradeDetails()
+            },
+            onTradeSaved: { [weak self] _ in
+                await self?.loadTradeHistory()
+            }
+        )
+    }
+
+    func didDismissTradeDetails() {
+        tradeDetailsViewModel = nil
     }
 
     func didDismissTradeEditor() {

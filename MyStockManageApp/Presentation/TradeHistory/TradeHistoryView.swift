@@ -32,10 +32,16 @@ struct TradeHistoryView: View {
                                     .padding(.bottom, 8)
 
                                 ForEach(Array(section.transactions.enumerated()), id: \.element.id) { index, transaction in
-                                    TradeHistoryTransactionRowView(
-                                        transaction: transaction,
-                                        showsDivider: index < section.transactions.count - 1
-                                    )
+                                    Button {
+                                        viewModel.didSelectTransaction(transaction)
+                                    } label: {
+                                        TradeHistoryTransactionRowView(
+                                            transaction: transaction,
+                                            showsDivider: index < section.transactions.count - 1
+                                        )
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }
@@ -51,6 +57,9 @@ struct TradeHistoryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(.white)
+        .fullScreenCover(item: presentedTradeDetailsBinding) { tradeDetailsViewModel in
+            TradeDetailsView(viewModel: tradeDetailsViewModel)
+        }
         .fullScreenCover(item: presentedTradeEditorBinding) { tradeEditorViewModel in
             TradeEditorView(viewModel: tradeEditorViewModel)
         }
@@ -68,6 +77,19 @@ struct TradeHistoryView: View {
                 }
 
                 viewModel.didDismissTradeEditor()
+            }
+        )
+    }
+
+    private var presentedTradeDetailsBinding: Binding<TradeDetailsViewModel?> {
+        Binding(
+            get: { viewModel.tradeDetailsViewModel },
+            set: { tradeDetailsViewModel in
+                guard tradeDetailsViewModel == nil else {
+                    return
+                }
+
+                viewModel.didDismissTradeDetails()
             }
         )
     }

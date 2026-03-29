@@ -49,6 +49,38 @@ final class TradeHistoryViewModelTests: XCTestCase {
         XCTAssertNotNil(sut.tradeEditorViewModel)
     }
 
+    func testDidSelectTransactionPresentsTradeDetails() async {
+        let store = TradeHistoryStoreMock(trades: makeTradeRecords())
+        let sut = makeSUT(store: store)
+        await sut.loadTradeHistory()
+
+        guard let transaction = sut.displayedSections.first?.transactions.first else {
+            XCTFail("Expected first transaction")
+            return
+        }
+
+        sut.didSelectTransaction(transaction)
+
+        XCTAssertEqual(sut.tradeDetailsViewModel?.transaction.id, transaction.id)
+        XCTAssertEqual(sut.tradeDetailsViewModel?.symbolText, "TSLA")
+    }
+
+    func testDidDismissTradeDetailsClearsPresentedDetails() async {
+        let store = TradeHistoryStoreMock(trades: makeTradeRecords())
+        let sut = makeSUT(store: store)
+        await sut.loadTradeHistory()
+
+        guard let transaction = sut.displayedSections.first?.transactions.first else {
+            XCTFail("Expected first transaction")
+            return
+        }
+
+        sut.didSelectTransaction(transaction)
+        sut.didDismissTradeDetails()
+
+        XCTAssertNil(sut.tradeDetailsViewModel)
+    }
+
     func testDidDismissTradeEditorClearsPresentedEditor() {
         let sut = makeSUT(store: TradeHistoryStoreMock(trades: makeTradeRecords()))
 
@@ -87,6 +119,38 @@ final class TradeHistoryViewModelTests: XCTestCase {
         XCTAssertEqual(sut.displayedSections.first?.transactions.first?.targetPrice, 250)
         XCTAssertEqual(sut.displayedSections.first?.transactions.first?.stopLoss, 150)
         XCTAssertEqual(sut.summaryText, "2026: 3 Buys, 3 Sells")
+    }
+
+    func testSavingTradeFromPresentedDetailsEditorUpdatesTradeWithoutDuplicatingIt() async {
+        let store = TradeHistoryStoreMock(trades: makeTradeRecords())
+        let sut = makeSUT(store: store)
+        await sut.loadTradeHistory()
+
+        guard let transaction = sut.displayedSections.first?.transactions.first else {
+            XCTFail("Expected first transaction")
+            return
+        }
+
+        sut.didSelectTransaction(transaction)
+        sut.tradeDetailsViewModel?.didTapEditButton()
+
+        guard let editor = sut.tradeDetailsViewModel?.tradeEditorViewModel else {
+            XCTFail("Expected details editor to be presented")
+            return
+        }
+
+        editor.didChangeQuantityText("225")
+        editor.didChangeTargetPriceText("300")
+        editor.didChangeStopLossText("180")
+        editor.didChangeReasoning("Updated conviction with stronger delivery momentum.")
+
+        await editor.didTapSaveButton()
+
+        XCTAssertEqual(sut.tradeDetailsViewModel?.transaction.shareCount, 225)
+        XCTAssertEqual(sut.tradeDetailsViewModel?.transaction.targetPrice, 300)
+        XCTAssertEqual(sut.tradeDetailsViewModel?.transaction.stopLoss, 180)
+        XCTAssertEqual(sut.displayedSections.first?.transactions.first?.shareCount, 225)
+        XCTAssertEqual(sut.displayedSections.first?.transactions.count, 3)
     }
 
     private func makeSUT(store: TradeHistoryStoreMock) -> TradeHistoryViewModel {
@@ -142,6 +206,11 @@ private actor TradeHistoryStoreMock {
     }
 
     func saveTrade(_ trade: TradeRecord) {
+        if let existingTradeIndex = trades.firstIndex(where: { $0.id == trade.id }) {
+            trades[existingTradeIndex] = trade
+            return
+        }
+
         trades.append(trade)
     }
 }

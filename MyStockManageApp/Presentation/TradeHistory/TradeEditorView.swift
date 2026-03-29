@@ -413,7 +413,7 @@ struct TradeEditorView_Previews: PreviewProvider {
                 symbol: "TSLA",
                 saveTradeUseCase: .noop,
                 onDismiss: {},
-                onSave: {}
+                onSave: { _ in }
             )
         )
     }

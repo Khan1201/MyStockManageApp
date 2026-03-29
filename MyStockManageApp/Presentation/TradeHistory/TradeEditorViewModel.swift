@@ -16,6 +16,7 @@ final class TradeEditorViewModel: ObservableObject, Identifiable {
     @Published private(set) var isSaving = false
     @Published private(set) var saveErrorMessage: String?
 
+    private let tradeID: String
     private let initialSymbol: String
     private let initialTransactionType: TradeHistoryTransactionType
     private let initialTradeDate: Date
@@ -26,9 +27,10 @@ final class TradeEditorViewModel: ObservableObject, Identifiable {
     private let initialReasoning: String
     private let saveTradeUseCase: SaveTradeUseCase
     private let onDismiss: () -> Void
-    private let onSave: () async -> Void
+    private let onSave: (TradeRecord) async -> Void
 
     init(
+        tradeID: String = UUID().uuidString,
         symbol: String = "",
         transactionType: TradeHistoryTransactionType = .buy,
         tradeDate: Date = Date(),
@@ -39,10 +41,11 @@ final class TradeEditorViewModel: ObservableObject, Identifiable {
         reasoning: String = "",
         saveTradeUseCase: SaveTradeUseCase = .noop,
         onDismiss: @escaping () -> Void,
-        onSave: @escaping () async -> Void
+        onSave: @escaping (TradeRecord) async -> Void
     ) {
         let quantityText = String(max(quantity, 0))
 
+        self.tradeID = tradeID
         self.symbol = symbol
         self.transactionType = transactionType
         self.tradeDate = tradeDate
@@ -135,21 +138,21 @@ final class TradeEditorViewModel: ObservableObject, Identifiable {
         saveErrorMessage = nil
 
         do {
-            try await saveTradeUseCase.execute(
-                TradeRecord(
-                    symbol: trimmedSymbol,
-                    tradedAt: tradeDate,
-                    shareCount: shareCount,
-                    transactionType: transactionType,
-                    strategy: strategy,
-                    targetPrice: targetPrice,
-                    stopLoss: stopLoss,
-                    reasoning: trimmedReasoning
-                )
+            let trade = TradeRecord(
+                id: tradeID,
+                symbol: trimmedSymbol,
+                tradedAt: tradeDate,
+                shareCount: shareCount,
+                transactionType: transactionType,
+                strategy: strategy,
+                targetPrice: targetPrice,
+                stopLoss: stopLoss,
+                reasoning: trimmedReasoning
             )
 
+            try await saveTradeUseCase.execute(trade)
             isSaving = false
-            await onSave()
+            await onSave(trade)
             onDismiss()
         } catch {
             isSaving = false
@@ -170,11 +173,19 @@ final class TradeEditorViewModel: ObservableObject, Identifiable {
     }
 
     private var targetPrice: Double? {
-        Double(targetPriceText)
+        guard strategy == .themeBased else {
+            return nil
+        }
+
+        return Double(targetPriceText)
     }
 
     private var stopLoss: Double? {
-        Double(stopLossText)
+        guard strategy == .themeBased else {
+            return nil
+        }
+
+        return Double(stopLossText)
     }
 
     private func resetDraft() {
