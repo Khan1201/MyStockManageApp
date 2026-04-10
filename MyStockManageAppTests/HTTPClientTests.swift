@@ -2,24 +2,21 @@ import Foundation
 import XCTest
 @testable import MyStockManageApp
 
-final class FinnhubClientInterceptorTests: XCTestCase {
-    func testFetchQuoteNotifiesInterceptorForRequestAndResponse() async throws {
-        let interceptor = SpyStocksHTTPInterceptor()
+final class HTTPClientTests: XCTestCase {
+    func testDataForRequestNotifiesInterceptorForRequestAndResponse() async throws {
+        let interceptor = SpyHTTPInterceptor()
         let responseData = Self.jsonData(#"{"c":189.43,"dp":1.31}"#)
-        let client = FinnhubClient(
-            session: StubStocksHTTPSession(
+        let client = HTTPClient(
+            session: StubHTTPClientSession(
                 data: responseData,
                 statusCode: 200,
                 headers: ["Content-Type": "application/json"]
             ),
-            configuration: FinnhubConfiguration(
-                baseURL: URL(string: "https://example.com/api/v1")!,
-                token: "test-token"
-            ),
             interceptor: interceptor
         )
+        let request = URLRequest(url: URL(string: "https://example.com/api/v1/quote?symbol=AAPL&token=test-token")!)
 
-        _ = try await client.fetchQuote(symbol: "AAPL")
+        _ = try await client.data(for: request)
 
         let snapshot = interceptor.snapshot()
         XCTAssertEqual(snapshot.requests.count, 1)
@@ -33,24 +30,21 @@ final class FinnhubClientInterceptorTests: XCTestCase {
         XCTAssertEqual(snapshot.errors.count, 0)
     }
 
-    func testFetchQuoteLogsResponseBeforeThrowingInvalidStatusCode() async {
-        let interceptor = SpyStocksHTTPInterceptor()
-        let client = FinnhubClient(
-            session: StubStocksHTTPSession(
+    func testDataForRequestLogsResponseBeforeThrowingInvalidStatusCode() async {
+        let interceptor = SpyHTTPInterceptor()
+        let client = HTTPClient(
+            session: StubHTTPClientSession(
                 data: Self.jsonData(#"{"error":"unauthorized"}"#),
                 statusCode: 401
             ),
-            configuration: FinnhubConfiguration(
-                baseURL: URL(string: "https://example.com/api/v1")!,
-                token: "test-token"
-            ),
             interceptor: interceptor
         )
+        let request = URLRequest(url: URL(string: "https://example.com/api/v1/quote?symbol=AAPL&token=test-token")!)
 
         do {
-            _ = try await client.fetchQuote(symbol: "AAPL")
+            _ = try await client.data(for: request)
             XCTFail("Expected invalid status code error")
-        } catch let error as FinnhubClientError {
+        } catch let error as HTTPClientError {
             guard case let .invalidStatusCode(statusCode) = error else {
                 return XCTFail("Unexpected error: \(error)")
             }
@@ -69,7 +63,7 @@ final class FinnhubClientInterceptorTests: XCTestCase {
 
     func testLoggingInterceptorRedactsSensitiveRequestValues() {
         let recorder = LogRecorder()
-        let interceptor = LoggingStocksHTTPInterceptor(sink: { [recorder] entry in
+        let interceptor = LoggingHTTPInterceptor(sink: { [recorder] entry in
             recorder.record(entry)
         })
         var request = URLRequest(
@@ -106,13 +100,13 @@ final class FinnhubClientInterceptorTests: XCTestCase {
     }
 }
 
-private extension FinnhubClientInterceptorTests {
+private extension HTTPClientTests {
     static func jsonData(_ string: String) -> Data {
         Data(string.utf8)
     }
 }
 
-private final class SpyStocksHTTPInterceptor: StocksHTTPInterceptor, @unchecked Sendable {
+private final class SpyHTTPInterceptor: HTTPInterceptor, @unchecked Sendable {
     private let lock = NSLock()
     private var requests: [URLRequest] = []
     private var responses: [LoggedResponse] = []
@@ -168,7 +162,7 @@ private final class LogRecorder: @unchecked Sendable {
     }
 }
 
-private struct StubStocksHTTPSession: StocksHTTPSession {
+private struct StubHTTPClientSession: HTTPClientSession {
     let data: Data
     let statusCode: Int
     var headers: [String: String] = [:]

@@ -21,15 +21,15 @@ final class FinnhubConfigurationTests: XCTestCase {
     }
 
     func testFetchQuoteThrowsMissingAPIKeyBeforeMakingRequest() async {
-        let client = FinnhubClient(
+        let service = FinnhubService(
             session: UnexpectedRequestSession(),
             configuration: FinnhubConfiguration(token: nil)
         )
 
         do {
-            _ = try await client.fetchQuote(symbol: "AAPL")
+            _ = try await service.fetchQuote(symbol: "AAPL")
             XCTFail("Expected fetchQuote to throw")
-        } catch FinnhubClientError.missingAPIKey {
+        } catch FinnhubServiceError.missingAPIKey {
             XCTAssertTrue(true)
         } catch {
             XCTFail("Unexpected error: \(error)")
@@ -37,7 +37,7 @@ final class FinnhubConfigurationTests: XCTestCase {
     }
 }
 
-private struct UnexpectedRequestSession: StocksHTTPSession {
+private struct UnexpectedRequestSession: HTTPClientSession {
     func data(for _: URLRequest) async throws -> (Data, URLResponse) {
         throw URLError(.badServerResponse)
     }

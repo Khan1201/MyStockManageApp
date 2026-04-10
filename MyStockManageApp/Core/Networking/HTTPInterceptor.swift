@@ -1,13 +1,13 @@
 import Foundation
 import OSLog
 
-protocol StocksHTTPInterceptor: Sendable {
+protocol HTTPInterceptor: Sendable {
     func willSend(_ request: URLRequest)
     func didReceive(data: Data, response: URLResponse, for request: URLRequest)
     func didFail(_ error: any Error, for request: URLRequest)
 }
 
-struct LoggingStocksHTTPInterceptor: StocksHTTPInterceptor {
+struct LoggingHTTPInterceptor: HTTPInterceptor {
     private static let defaultSubsystem = Bundle.main.bundleIdentifier ?? "MyStockManageApp"
 
     private let logger: Logger
@@ -34,7 +34,7 @@ struct LoggingStocksHTTPInterceptor: StocksHTTPInterceptor {
     }
 }
 
-private extension LoggingStocksHTTPInterceptor {
+private extension LoggingHTTPInterceptor {
     var maxLoggedBodyLength: Int { 2_000 }
 
     func logDebug(_ message: String) {

@@ -1,11 +1,5 @@
 import Foundation
 
-protocol StocksHTTPSession {
-    func data(for request: URLRequest) async throws -> (Data, URLResponse)
-}
-
-extension URLSession: StocksHTTPSession {}
-
 struct FinnhubConfiguration {
     let baseURL: URL
     let token: String?
@@ -63,33 +57,32 @@ struct FinnhubConfiguration {
     }
 }
 
-enum FinnhubClientError: Error {
+enum FinnhubServiceError: Error {
     case missingAPIKey
     case invalidURL
-    case invalidResponse
-    case invalidStatusCode(Int)
     case apiError(String)
 }
 
-struct FinnhubClient {
-    private let session: any StocksHTTPSession
+struct FinnhubService {
+    private let httpClient: HTTPClient
     private let configuration: FinnhubConfiguration
     private let calendar: Calendar
     private let nowProvider: () -> Date
-    private let interceptor: (any StocksHTTPInterceptor)?
 
     init(
-        session: any StocksHTTPSession = URLSession.shared,
+        session: any HTTPClientSession = URLSession.shared,
         configuration: FinnhubConfiguration = .live(),
         calendar: Calendar = .autoupdatingCurrent,
         nowProvider: @escaping () -> Date = Date.init,
-        interceptor: (any StocksHTTPInterceptor)? = LoggingStocksHTTPInterceptor()
+        interceptor: (any HTTPInterceptor)? = LoggingHTTPInterceptor()
     ) {
-        self.session = session
+        self.httpClient = HTTPClient(
+            session: session,
+            interceptor: interceptor
+        )
         self.configuration = configuration
         self.calendar = calendar
         self.nowProvider = nowProvider
-        self.interceptor = interceptor
     }
 
     func fetchQuote(symbol: String) async throws -> FinnhubQuoteDTO {
@@ -180,14 +173,14 @@ struct FinnhubClient {
     }
 }
 
-private extension FinnhubClient {
+private extension FinnhubService {
     func request<Response: Decodable>(
         path: String,
         queryItems: [URLQueryItem],
-        responseType: Response.Type
+        responseType _: Response.Type
     ) async throws -> Response {
         guard let token = configuration.token else {
-            throw FinnhubClientError.missingAPIKey
+            throw FinnhubServiceError.missingAPIKey
         }
 
         var components = URLComponents(
@@ -199,35 +192,16 @@ private extension FinnhubClient {
         ]
 
         guard let url = components?.url else {
-            throw FinnhubClientError.invalidURL
+            throw FinnhubServiceError.invalidURL
         }
 
-        let request = URLRequest(url: url)
-        interceptor?.willSend(request)
-
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch {
-            interceptor?.didFail(error, for: request)
-            throw error
-        }
-
-        interceptor?.didReceive(data: data, response: response, for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw FinnhubClientError.invalidResponse
-        }
-
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw FinnhubClientError.invalidStatusCode(httpResponse.statusCode)
-        }
+        let data = try await httpClient.data(for: URLRequest(url: url))
 
         do {
             return try JSONDecoder().decode(Response.self, from: data)
         } catch {
             if let apiError = try? JSONDecoder().decode(FinnhubErrorDTO.self, from: data) {
-                throw FinnhubClientError.apiError(apiError.error)
+                throw FinnhubServiceError.apiError(apiError.error)
             }
             throw error
         }

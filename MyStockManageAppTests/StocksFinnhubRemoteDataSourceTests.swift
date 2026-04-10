@@ -150,7 +150,7 @@ private extension StocksFinnhubRemoteDataSourceTests {
         let resolvedNow = now ?? Self.makeDate("2026-03-29T12:00:00Z")
 
         return StocksFinnhubRemoteDataSource(
-            session: StubStocksHTTPSession(handler: handler),
+            session: StubHTTPClientSession(handler: handler),
             configuration: FinnhubConfiguration(
                 baseURL: URL(string: "https://example.com/api/v1")!,
                 token: "test-token"
@@ -195,7 +195,7 @@ private extension StocksFinnhubRemoteDataSourceTests {
     }
 }
 
-private struct StubStocksHTTPSession: StocksHTTPSession {
+private struct StubHTTPClientSession: HTTPClientSession {
     let handler: @Sendable (URLRequest) throws -> Data
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
