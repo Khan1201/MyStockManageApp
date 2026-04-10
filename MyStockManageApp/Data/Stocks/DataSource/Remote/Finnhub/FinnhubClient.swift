@@ -76,17 +76,20 @@ struct FinnhubClient {
     private let configuration: FinnhubConfiguration
     private let calendar: Calendar
     private let nowProvider: () -> Date
+    private let interceptor: (any StocksHTTPInterceptor)?
 
     init(
         session: any StocksHTTPSession = URLSession.shared,
         configuration: FinnhubConfiguration = .live(),
         calendar: Calendar = .autoupdatingCurrent,
-        nowProvider: @escaping () -> Date = Date.init
+        nowProvider: @escaping () -> Date = Date.init,
+        interceptor: (any StocksHTTPInterceptor)? = LoggingStocksHTTPInterceptor()
     ) {
         self.session = session
         self.configuration = configuration
         self.calendar = calendar
         self.nowProvider = nowProvider
+        self.interceptor = interceptor
     }
 
     func fetchQuote(symbol: String) async throws -> FinnhubQuoteDTO {
@@ -200,7 +203,17 @@ private extension FinnhubClient {
         }
 
         let request = URLRequest(url: url)
-        let (data, response) = try await session.data(for: request)
+        interceptor?.willSend(request)
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            interceptor?.didFail(error, for: request)
+            throw error
+        }
+
+        interceptor?.didReceive(data: data, response: response, for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw FinnhubClientError.invalidResponse

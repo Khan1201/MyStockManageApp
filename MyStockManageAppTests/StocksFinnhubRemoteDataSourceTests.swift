@@ -86,7 +86,7 @@ final class StocksFinnhubRemoteDataSourceTests: XCTestCase {
         XCTAssertEqual(content.priceTarget.targetMean, 202.4)
     }
 
-    func testFetchMarketSentimentReturnsNewsDTOs() async throws {
+    func testFetchMarketSentimentReturnsRemoteArticles() async throws {
         let sut = makeSUT(now: Self.makeDate("2026-03-29T12:00:00Z")) { request in
             switch try Self.endpoint(for: request) {
             case "company-news?from=2026-03-15&symbol=AAPL&to=2026-03-29":

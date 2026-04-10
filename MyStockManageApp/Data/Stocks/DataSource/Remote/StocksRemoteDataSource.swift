@@ -1,28 +1,95 @@
 import Foundation
 
-typealias PortfolioStockRemotePayload = (quote: FinnhubQuoteDTO, profile: FinnhubProfileDTO?)
-typealias StockInsightsRemotePayload = (
-    recommendations: [FinnhubRecommendationDTO],
-    articles: [FinnhubNewsDTO],
-    annualReports: [FinnhubFinancialReportDTO],
-    quarterlyReports: [FinnhubFinancialReportDTO],
-    earningsHistory: [FinnhubEarningsHistoryDTO],
-    earningsCalendar: [FinnhubEarningsCalendarDTO]
-)
-typealias AnalystForecastsRemotePayload = (
-    recommendations: [FinnhubRecommendationDTO],
-    priceTarget: FinnhubPriceTargetDTO
-)
-typealias EarningsRevenueRemotePayload = (
-    quarterlyReports: [FinnhubFinancialReportDTO],
-    earningsHistory: [FinnhubEarningsHistoryDTO],
-    earningsCalendar: [FinnhubEarningsCalendarDTO]
-)
+struct StockQuoteRemoteModel: Equatable, Sendable {
+    let currentPrice: Double
+    let changePercent: Double
+}
+
+struct StockProfileRemoteModel: Equatable, Sendable {
+    let name: String?
+
+    var trimmedName: String? {
+        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed?.isEmpty == false ? trimmed : nil
+    }
+}
+
+struct StockRecommendationRemoteModel: Equatable, Sendable {
+    let buy: Int
+    let hold: Int
+    let period: String
+    let sell: Int
+    let strongBuy: Int
+    let strongSell: Int
+}
+
+struct StockPriceTargetRemoteModel: Equatable, Sendable {
+    let targetHigh: Double?
+    let targetLow: Double?
+    let targetMean: Double?
+    let targetMedian: Double?
+}
+
+struct SentimentArticleRemoteModel: Equatable, Sendable {
+    let datetime: TimeInterval
+    let headline: String
+    let id: Int
+    let source: String
+    let summary: String
+}
+
+struct EarningsHistoryRemoteModel: Equatable, Sendable {
+    let actual: Double?
+    let estimate: Double?
+    let quarter: Int
+    let year: Int
+}
+
+struct EarningsCalendarRemoteModel: Equatable, Sendable {
+    let date: String
+    let epsEstimate: Double?
+    let quarter: Int
+    let revenueEstimate: Double?
+    let year: Int
+}
+
+struct FinancialReportRemoteModel: Equatable, Sendable {
+    let filedDate: String
+    let quarter: Int
+    let revenueValue: Double?
+    let dilutedEPSValue: Double?
+    let year: Int
+}
+
+struct PortfolioStockRemotePayload: Equatable, Sendable {
+    let quote: StockQuoteRemoteModel
+    let profile: StockProfileRemoteModel?
+}
+
+struct StockInsightsRemotePayload: Equatable, Sendable {
+    let recommendations: [StockRecommendationRemoteModel]
+    let articles: [SentimentArticleRemoteModel]
+    let annualReports: [FinancialReportRemoteModel]
+    let quarterlyReports: [FinancialReportRemoteModel]
+    let earningsHistory: [EarningsHistoryRemoteModel]
+    let earningsCalendar: [EarningsCalendarRemoteModel]
+}
+
+struct AnalystForecastsRemotePayload: Equatable, Sendable {
+    let recommendations: [StockRecommendationRemoteModel]
+    let priceTarget: StockPriceTargetRemoteModel
+}
+
+struct EarningsRevenueRemotePayload: Equatable, Sendable {
+    let quarterlyReports: [FinancialReportRemoteModel]
+    let earningsHistory: [EarningsHistoryRemoteModel]
+    let earningsCalendar: [EarningsCalendarRemoteModel]
+}
 
 protocol StocksRemoteDataSource {
     func fetchStocksOverview() async throws -> [PortfolioStockRemotePayload]
     func fetchStockInsights(for stock: Stock) async throws -> StockInsightsRemotePayload
     func fetchAnalystForecasts(for stock: Stock) async throws -> AnalystForecastsRemotePayload
-    func fetchMarketSentiment(for stock: Stock) async throws -> [FinnhubNewsDTO]
+    func fetchMarketSentiment(for stock: Stock) async throws -> [SentimentArticleRemoteModel]
     func fetchEarningsRevenue(for stock: Stock) async throws -> EarningsRevenueRemotePayload
 }

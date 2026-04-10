@@ -1,25 +1,6 @@
 import Foundation
 
-struct StocksFinnhubTransformer {
-    static let portfolioDescriptors: [SupportedStockDescriptor] = [
-        .init(symbol: "AAPL", companyName: "Apple Inc.", brand: .apple),
-        .init(symbol: "MSFT", companyName: "Microsoft Corp", brand: .microsoft),
-        .init(symbol: "TSLA", companyName: "Tesla, Inc.", brand: .tesla),
-        .init(symbol: "NVDA", companyName: "NVIDIA Corp", brand: .nvidia),
-        .init(symbol: "GOOGL", companyName: "Alphabet Inc.", brand: .google)
-    ]
-
-    static let searchableDescriptors: [SupportedStockDescriptor] = [
-        .init(symbol: "AAPL", companyName: "Apple Inc.", brand: .apple),
-        .init(symbol: "AMZN", companyName: "Amazon.com, Inc.", brand: .amazon),
-        .init(symbol: "AMD", companyName: "Advanced Micro Devices, Inc.", brand: .amd),
-        .init(symbol: "ADBE", companyName: "Adobe Inc.", brand: .adobe),
-        .init(symbol: "MSFT", companyName: "Microsoft Corp", brand: .microsoft),
-        .init(symbol: "TSLA", companyName: "Tesla, Inc.", brand: .tesla),
-        .init(symbol: "NVDA", companyName: "NVIDIA Corp", brand: .nvidia),
-        .init(symbol: "GOOGL", companyName: "Alphabet Inc.", brand: .google)
-    ]
-
+struct StocksRemoteTransformer {
     private let calendar: Calendar
     private let referenceDateProvider: () -> Date
 
@@ -33,18 +14,18 @@ struct StocksFinnhubTransformer {
 
     func makeStocksOverview(from portfolioPayload: [PortfolioStockRemotePayload]) -> StocksOverview {
         StocksOverview(
-            portfolio: zip(Self.portfolioDescriptors, portfolioPayload).compactMap(makePortfolioStock),
-            searchableStocks: Self.searchableDescriptors.map(makeSearchResultStock)
+            portfolio: zip(SupportedStockDescriptor.portfolioDescriptors, portfolioPayload).compactMap(makePortfolioStock),
+            searchableStocks: SupportedStockDescriptor.searchableDescriptors.map(makeSearchResultStock)
         )
     }
 
     func makeStockInsights(
-        recommendations: [FinnhubRecommendationDTO],
-        articles: [FinnhubNewsDTO],
-        annualReports: [FinnhubFinancialReportDTO],
-        quarterlyReports: [FinnhubFinancialReportDTO],
-        earningsHistory: [FinnhubEarningsHistoryDTO],
-        earningsCalendar: [FinnhubEarningsCalendarDTO]
+        recommendations: [StockRecommendationRemoteModel],
+        articles: [SentimentArticleRemoteModel],
+        annualReports: [FinancialReportRemoteModel],
+        quarterlyReports: [FinancialReportRemoteModel],
+        earningsHistory: [EarningsHistoryRemoteModel],
+        earningsCalendar: [EarningsCalendarRemoteModel]
     ) -> StockInsights {
         let sentimentSections = makeSentimentSections(from: articles)
         let earningsSummary = makeStockEstimateSnapshots(
@@ -62,8 +43,8 @@ struct StocksFinnhubTransformer {
     }
 
     func makeAnalystForecasts(
-        recommendations: [FinnhubRecommendationDTO],
-        priceTarget: FinnhubPriceTargetDTO
+        recommendations: [StockRecommendationRemoteModel],
+        priceTarget: StockPriceTargetRemoteModel
     ) -> AnalystForecastsContent {
         AnalystForecastsContent(
             overview: makeAnalystOverview(
@@ -74,7 +55,7 @@ struct StocksFinnhubTransformer {
         )
     }
 
-    func makeSentimentSections(from articles: [FinnhubNewsDTO]) -> [SentimentSection] {
+    func makeSentimentSections(from articles: [SentimentArticleRemoteModel]) -> [SentimentSection] {
         let classifiedArticles = articles
             .sorted { $0.datetime > $1.datetime }
             .compactMap { article -> ClassifiedSentimentArticle? in
@@ -105,9 +86,9 @@ struct StocksFinnhubTransformer {
     }
 
     func makeEarningsYearRecords(
-        quarterlyReports: [FinnhubFinancialReportDTO],
-        earningsHistory: [FinnhubEarningsHistoryDTO],
-        earningsCalendar: [FinnhubEarningsCalendarDTO]
+        quarterlyReports: [FinancialReportRemoteModel],
+        earningsHistory: [EarningsHistoryRemoteModel],
+        earningsCalendar: [EarningsCalendarRemoteModel]
     ) -> [EarningsYearRecord] {
         let mergedQuarters = mergeQuarterlyData(
             quarterlyReports: quarterlyReports,
@@ -136,7 +117,7 @@ struct StocksFinnhubTransformer {
     }
 }
 
-private extension StocksFinnhubTransformer {
+private extension StocksRemoteTransformer {
     func makePortfolioStock(from pair: (SupportedStockDescriptor, PortfolioStockRemotePayload)) -> Stock {
         let descriptor = pair.0
         let payload = pair.1
@@ -157,7 +138,7 @@ private extension StocksFinnhubTransformer {
         )
     }
 
-    func makeForecastSummary(from recommendations: [FinnhubRecommendationDTO]) -> [ForecastSummaryMetric] {
+    func makeForecastSummary(from recommendations: [StockRecommendationRemoteModel]) -> [ForecastSummaryMetric] {
         guard let latest = recommendations.sorted(by: { $0.period > $1.period }).first else {
             return []
         }
@@ -172,8 +153,8 @@ private extension StocksFinnhubTransformer {
     }
 
     func makeAnalystOverview(
-        from recommendations: [FinnhubRecommendationDTO],
-        priceTarget: FinnhubPriceTargetDTO
+        from recommendations: [StockRecommendationRemoteModel],
+        priceTarget: StockPriceTargetRemoteModel
     ) -> AnalystForecastOverview {
         let averageTarget = resolvedAverageTarget(from: priceTarget)
 
@@ -201,7 +182,7 @@ private extension StocksFinnhubTransformer {
         )
     }
 
-    func resolvedAverageTarget(from priceTarget: FinnhubPriceTargetDTO) -> Double {
+    func resolvedAverageTarget(from priceTarget: StockPriceTargetRemoteModel) -> Double {
         priceTarget.targetMean
             ?? priceTarget.targetMedian
             ?? priceTarget.targetHigh
@@ -231,10 +212,10 @@ private extension StocksFinnhubTransformer {
     }
 
     func makeStockEstimateSnapshots(
-        annualReports: [FinnhubFinancialReportDTO],
-        quarterlyReports: [FinnhubFinancialReportDTO],
-        earningsHistory: [FinnhubEarningsHistoryDTO],
-        earningsCalendar: [FinnhubEarningsCalendarDTO]
+        annualReports: [FinancialReportRemoteModel],
+        quarterlyReports: [FinancialReportRemoteModel],
+        earningsHistory: [EarningsHistoryRemoteModel],
+        earningsCalendar: [EarningsCalendarRemoteModel]
     ) -> [StockEstimateSnapshot] {
         let annualActuals = makeAnnualActualValues(from: annualReports)
         let estimatedYears = makeEstimatedYearValues(
@@ -285,13 +266,13 @@ private extension StocksFinnhubTransformer {
         return snapshots
     }
 
-    func makeAnnualActualValues(from reports: [FinnhubFinancialReportDTO]) -> [AnnualFinancialValue] {
+    func makeAnnualActualValues(from reports: [FinancialReportRemoteModel]) -> [AnnualFinancialValue] {
         reports
             .filter { $0.quarter == 0 }
             .compactMap { report in
                 guard
-                    let revenue = report.report.incomeStatement.revenueValue,
-                    let eps = report.report.incomeStatement.dilutedEPSValue
+                    let revenue = report.revenueValue,
+                    let eps = report.dilutedEPSValue
                 else {
                     return nil
                 }
@@ -301,9 +282,9 @@ private extension StocksFinnhubTransformer {
     }
 
     func makeEstimatedYearValues(
-        quarterlyReports: [FinnhubFinancialReportDTO],
-        earningsHistory: [FinnhubEarningsHistoryDTO],
-        earningsCalendar: [FinnhubEarningsCalendarDTO]
+        quarterlyReports: [FinancialReportRemoteModel],
+        earningsHistory: [EarningsHistoryRemoteModel],
+        earningsCalendar: [EarningsCalendarRemoteModel]
     ) -> [AnnualFinancialValue] {
         let mergedQuarters = mergeQuarterlyData(
             quarterlyReports: quarterlyReports,
@@ -337,17 +318,17 @@ private extension StocksFinnhubTransformer {
     }
 
     func mergeQuarterlyData(
-        quarterlyReports: [FinnhubFinancialReportDTO],
-        earningsHistory: [FinnhubEarningsHistoryDTO],
-        earningsCalendar: [FinnhubEarningsCalendarDTO]
+        quarterlyReports: [FinancialReportRemoteModel],
+        earningsHistory: [EarningsHistoryRemoteModel],
+        earningsCalendar: [EarningsCalendarRemoteModel]
     ) -> [QuarterKey: QuarterFinancialValue] {
         var valuesByQuarter: [QuarterKey: QuarterFinancialValue] = [:]
 
         for report in quarterlyReports where (1...4).contains(report.quarter) {
             let key = QuarterKey(year: report.year, quarter: report.quarter)
             var value = valuesByQuarter[key] ?? QuarterFinancialValue()
-            value.revenueActual = report.report.incomeStatement.revenueValue
-            value.epsActual = report.report.incomeStatement.dilutedEPSValue
+            value.revenueActual = report.revenueValue
+            value.epsActual = report.dilutedEPSValue
             value.filedDate = fileDate(from: report.filedDate)
             valuesByQuarter[key] = value
         }
@@ -406,7 +387,7 @@ private extension StocksFinnhubTransformer {
         )
     }
 
-    func classifySentiment(for article: FinnhubNewsDTO) -> StockMarketSignal? {
+    func classifySentiment(for article: SentimentArticleRemoteModel) -> StockMarketSignal? {
         let text = "\(article.headline) \(article.summary)".localizedLowercase
         let bullishScore = bullishKeywords.reduce(into: 0) { partialResult, keyword in
             if text.contains(keyword) {
@@ -518,14 +499,10 @@ private extension StocksFinnhubTransformer {
             return "TODAY"
         }
 
-        if day == calendar.date(byAdding: .day, value: -1, to: referenceDay) {
-            return "YESTERDAY"
-        }
-
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "dd MMM yyyy"
-        return formatter.string(from: date).uppercased()
+        formatter.dateFormat = "MMM d"
+        return formatter.string(from: day).uppercased()
     }
 
     func sectionID(from date: Date) -> String {
@@ -542,11 +519,34 @@ private extension StocksFinnhubTransformer {
         return formatter.string(from: date)
     }
 
-    func fileDate(from rawValue: String) -> Date? {
-        let formatter = DateFormatter()
+    func abbreviatedCurrency(_ value: Double, scale: CurrencyScale) -> String {
+        let formatter = NumberFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter.date(from: rawValue)
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        formatter.maximumFractionDigits = scale == .billions ? 1 : 2
+        formatter.minimumFractionDigits = 0
+
+        let normalizedValue: Double
+        switch scale {
+        case .plain:
+            normalizedValue = value
+        case .billions:
+            normalizedValue = value / 1_000_000_000
+        }
+
+        let prefix = formatter.string(from: NSNumber(value: normalizedValue)) ?? "$0"
+        return scale == .billions ? "\(prefix)B" : prefix
+    }
+
+    func deltaText(current: Double, previous: Double?) -> String? {
+        guard let previous else {
+            return nil
+        }
+
+        let delta = current - previous
+        let prefix = delta >= 0 ? "+" : "-"
+        return "\(prefix)\(abbreviatedCurrency(abs(delta), scale: .plain))"
     }
 
     func deltaPercent(current: Double, previous: Double?) -> Double? {
@@ -557,24 +557,10 @@ private extension StocksFinnhubTransformer {
         return ((current - previous) / abs(previous)) * 100
     }
 
-    func deltaText(current: Double, previous: Double?) -> String? {
-        guard let percent = deltaPercent(current: current, previous: previous) else {
-            return nil
-        }
-
-        let sign = percent >= 0 ? "+" : ""
-        return "\(sign)\(String(format: "%.1f", percent))%"
-    }
-
-    func abbreviatedCurrency(_ value: Double, scale: CurrencyScale) -> String {
-        let absoluteValue = abs(value)
-        let sign = value < 0 ? "-" : ""
-
-        switch scale {
-        case .plain:
-            return "\(sign)$\(String(format: "%.2f", absoluteValue))"
-        case .billions:
-            return "\(sign)$\(String(format: "%.1f", absoluteValue / 1_000_000_000))B"
-        }
+    func fileDate(from value: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter.date(from: value)
     }
 }

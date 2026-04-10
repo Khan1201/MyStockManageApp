@@ -2,11 +2,11 @@ import Foundation
 
 final class StocksRepositoryImpl: StocksRepository {
     private let remoteDataSource: any StocksRemoteDataSource
-    private let transformer: StocksFinnhubTransformer
+    private let transformer: StocksRemoteTransformer
 
     init(
         remoteDataSource: any StocksRemoteDataSource,
-        transformer: StocksFinnhubTransformer = StocksFinnhubTransformer()
+        transformer: StocksRemoteTransformer = StocksRemoteTransformer()
     ) {
         self.remoteDataSource = remoteDataSource
         self.transformer = transformer
