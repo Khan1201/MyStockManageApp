@@ -2,76 +2,25 @@ import CoreData
 import Foundation
 
 final class TradeHistoryPersistentStorage {
-    let container: NSPersistentContainer
-
-    private let loadError: Error?
+    private let persistentStorage: CoreDataPersistentStorage
 
     init(inMemory: Bool = false) {
-        let managedObjectModel = Self.makeManagedObjectModel()
-        container = NSPersistentContainer(name: "TradeHistoryModel", managedObjectModel: managedObjectModel)
-
-        let description = NSPersistentStoreDescription()
-        description.type = inMemory ? NSInMemoryStoreType : NSSQLiteStoreType
-        description.shouldAddStoreAsynchronously = false
-
-        if !inMemory, let storeURL = Self.defaultStoreURL() {
-            description.url = storeURL
-        }
-
-        container.persistentStoreDescriptions = [description]
-
-        var persistentStoreLoadError: Error?
-        container.loadPersistentStores { _, error in
-            persistentStoreLoadError = error
-        }
-
-        loadError = persistentStoreLoadError
-        container.viewContext.automaticallyMergesChangesFromParent = true
-        container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        persistentStorage = CoreDataPersistentStorage(
+            modelName: "TradeHistoryModel",
+            managedObjectModel: Self.makeManagedObjectModel(),
+            storeFileName: "TradeHistory.sqlite",
+            inMemory: inMemory
+        )
     }
 
     func performBackgroundTask<Result>(
         _ operation: @escaping (NSManagedObjectContext) throws -> Result
     ) async throws -> Result {
-        if let loadError {
-            throw loadError
-        }
-
-        return try await withCheckedThrowingContinuation { continuation in
-            container.performBackgroundTask { context in
-                context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
-
-                do {
-                    let result = try operation(context)
-                    continuation.resume(returning: result)
-                } catch {
-                    context.rollback()
-                    continuation.resume(throwing: error)
-                }
-            }
-        }
+        try await persistentStorage.performBackgroundTask(operation)
     }
 }
 
 private extension TradeHistoryPersistentStorage {
-    static func defaultStoreURL() -> URL? {
-        let fileManager = FileManager.default
-
-        guard let applicationSupportDirectory = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            return nil
-        }
-
-        let directory = applicationSupportDirectory.appendingPathComponent("MyStockManageApp", isDirectory: true)
-
-        do {
-            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
-        } catch {
-            return nil
-        }
-
-        return directory.appendingPathComponent("TradeHistory.sqlite")
-    }
-
     static func makeManagedObjectModel() -> NSManagedObjectModel {
         let model = NSManagedObjectModel()
         let entity = NSEntityDescription()
