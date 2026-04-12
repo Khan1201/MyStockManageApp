@@ -96,7 +96,7 @@ final class MarketSentimentViewModelTests: XCTestCase {
             companyName: "NVIDIA Corporation",
             price: 924.79,
             changePercent: 2.38,
-            logoStyle: .nvidia
+            brand: .nvidia
         )
     }
 }

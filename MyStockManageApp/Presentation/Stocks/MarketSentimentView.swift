@@ -52,7 +52,7 @@ struct MarketSentimentView_Previews: PreviewProvider {
                     companyName: "NVIDIA Corporation",
                     price: 924.79,
                     changePercent: 2.38,
-                    logoStyle: .nvidia
+                    brand: .nvidia
                 )
             )
         )

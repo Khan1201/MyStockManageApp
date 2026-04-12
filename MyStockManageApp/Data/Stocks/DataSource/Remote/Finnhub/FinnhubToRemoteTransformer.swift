@@ -9,7 +9,10 @@ struct FinnhubToRemoteTransformer: Sendable {
     }
 
     func makeProfile(from profile: FinnhubProfileDTO) -> StockProfileRemoteModel {
-        StockProfileRemoteModel(name: profile.name)
+        StockProfileRemoteModel(
+            name: profile.name,
+            logoURL: profile.logoURL
+        )
     }
 
     func makeRecommendation(from recommendation: FinnhubRecommendationDTO) -> StockRecommendationRemoteModel {

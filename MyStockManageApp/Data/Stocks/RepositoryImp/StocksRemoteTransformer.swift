@@ -126,7 +126,8 @@ private extension StocksRemoteTransformer {
             companyName: payload.profile?.trimmedName ?? descriptor.companyName,
             price: payload.quote.currentPrice,
             changePercent: payload.quote.changePercent,
-            brand: descriptor.brand
+            brand: descriptor.brand,
+            logoURL: payload.profile?.logoURL
         )
     }
 
@@ -134,7 +135,8 @@ private extension StocksRemoteTransformer {
         return StockSearchResult(
             symbol: descriptor.symbol,
             companyName: descriptor.companyName,
-            brand: descriptor.brand
+            brand: descriptor.brand,
+            logoURL: nil
         )
     }
 

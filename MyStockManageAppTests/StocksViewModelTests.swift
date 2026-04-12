@@ -111,7 +111,7 @@ final class StocksViewModelTests: XCTestCase {
             companyName: "Apple Inc.",
             price: 189.43,
             changePercent: -1.24,
-            logoStyle: .apple
+            brand: .apple
         )
 
         XCTAssertEqual(stock.priceText, "$189.43")
@@ -121,18 +121,18 @@ final class StocksViewModelTests: XCTestCase {
 
     private func makePortfolio() -> [PortfolioStock] {
         [
-            .init(symbol: "AAPL", companyName: "Apple Inc.", price: 189.43, changePercent: 1.24, logoStyle: .apple),
-            .init(symbol: "MSFT", companyName: "Microsoft Corp", price: 415.32, changePercent: -0.45, logoStyle: .microsoft),
-            .init(symbol: "TSLA", companyName: "Tesla, Inc.", price: 175.22, changePercent: 2.15, logoStyle: .tesla)
+            .init(symbol: "AAPL", companyName: "Apple Inc.", price: 189.43, changePercent: 1.24, brand: .apple),
+            .init(symbol: "MSFT", companyName: "Microsoft Corp", price: 415.32, changePercent: -0.45, brand: .microsoft),
+            .init(symbol: "TSLA", companyName: "Tesla, Inc.", price: 175.22, changePercent: 2.15, brand: .tesla)
         ]
     }
 
     private func makeSearchResults() -> [SearchResultStock] {
         [
-            .init(symbol: "AAPL", companyName: "Apple Inc.", logoStyle: .apple),
-            .init(symbol: "AMZN", companyName: "Amazon.com, Inc.", logoStyle: .amazon),
-            .init(symbol: "AMD", companyName: "Advanced Micro Devices, Inc.", logoStyle: .amd),
-            .init(symbol: "ADBE", companyName: "Adobe Inc.", logoStyle: .adobe)
+            .init(symbol: "AAPL", companyName: "Apple Inc.", brand: .apple),
+            .init(symbol: "AMZN", companyName: "Amazon.com, Inc.", brand: .amazon),
+            .init(symbol: "AMD", companyName: "Advanced Micro Devices, Inc.", brand: .amd),
+            .init(symbol: "ADBE", companyName: "Adobe Inc.", brand: .adobe)
         ]
     }
 }

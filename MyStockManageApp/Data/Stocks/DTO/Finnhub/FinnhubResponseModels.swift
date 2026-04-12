@@ -14,10 +14,20 @@ struct FinnhubQuoteDTO: Decodable, Equatable, Sendable {
 
 struct FinnhubProfileDTO: Decodable, Equatable, Sendable {
     let name: String?
+    let logo: String?
 
     var trimmedName: String? {
         let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed?.isEmpty == false ? trimmed : nil
+    }
+
+    var logoURL: URL? {
+        let trimmed = logo?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let trimmed, !trimmed.isEmpty else {
+            return nil
+        }
+
+        return URL(string: trimmed)
     }
 }
 

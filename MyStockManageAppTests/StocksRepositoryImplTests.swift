@@ -6,7 +6,10 @@ final class StocksRepositoryImplTests: XCTestCase {
         let remoteOverview: [PortfolioStockRemotePayload] = [
             .init(
                 quote: .init(currentPrice: 189.43, changePercent: 1.24),
-                profile: .init(name: "Apple Inc.")
+                profile: .init(
+                    name: "Apple Inc.",
+                    logoURL: URL(string: "https://example.com/aapl.png")
+                )
             )
         ]
         let repository = StocksRepositoryImpl(remoteDataSource: StocksRemoteDataSourceStub(overview: remoteOverview))
@@ -14,6 +17,7 @@ final class StocksRepositoryImplTests: XCTestCase {
         let overview = try await repository.fetchStocksOverview()
 
         XCTAssertEqual(overview.portfolio.map(\.symbol), ["AAPL"])
+        XCTAssertEqual(overview.portfolio.first?.logoURL, URL(string: "https://example.com/aapl.png"))
         XCTAssertEqual(
             overview.searchableStocks.map(\.symbol),
             SupportedStockDescriptor.searchableDescriptors.map(\.symbol)

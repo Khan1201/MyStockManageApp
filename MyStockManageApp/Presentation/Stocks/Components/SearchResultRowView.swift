@@ -7,7 +7,7 @@ struct SearchResultRowView: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                CompanyMarkView(style: stock.logoStyle)
+                CompanyMarkView(imageURL: stock.logoURL)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(stock.symbol)

@@ -9,7 +9,7 @@ struct StockDetailsHeaderView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 14) {
-                CompanyMarkView(style: stock.logoStyle)
+                CompanyMarkView(imageURL: stock.logoURL)
                     .scaleEffect(1.45)
                     .padding(8)
                     .background(Color.white.opacity(0.7))

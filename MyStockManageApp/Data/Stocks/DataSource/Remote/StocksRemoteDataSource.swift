@@ -7,6 +7,15 @@ struct StockQuoteRemoteModel: Equatable, Sendable {
 
 struct StockProfileRemoteModel: Equatable, Sendable {
     let name: String?
+    let logoURL: URL?
+
+    init(
+        name: String?,
+        logoURL: URL? = nil
+    ) {
+        self.name = name
+        self.logoURL = logoURL
+    }
 
     var trimmedName: String? {
         let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines)

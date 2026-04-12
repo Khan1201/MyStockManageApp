@@ -72,7 +72,7 @@ struct AnalystForecastsView_Previews: PreviewProvider {
                     companyName: "Apple Inc.",
                     price: 189.43,
                     changePercent: 1.24,
-                    logoStyle: .apple
+                    brand: .apple
                 )
             )
         )

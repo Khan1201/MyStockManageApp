@@ -8,7 +8,7 @@ final class StocksFinnhubRemoteDataSourceTests: XCTestCase {
             case "quote?symbol=AAPL":
                 return Self.jsonData(#"{"c":189.43,"dp":1.31}"#)
             case "stock/profile2?symbol=AAPL":
-                return Self.jsonData(#"{"name":"Apple Inc."}"#)
+                return Self.jsonData(#"{"name":"Apple Inc.","logo":"https://example.com/aapl.png"}"#)
             case "quote?symbol=MSFT":
                 return Self.jsonData(#"{"c":415.32,"dp":-0.45}"#)
             case "stock/profile2?symbol=MSFT":
@@ -36,6 +36,7 @@ final class StocksFinnhubRemoteDataSourceTests: XCTestCase {
         XCTAssertEqual(overview.count, 5)
         XCTAssertEqual(overview.first?.quote.currentPrice, 189.43)
         XCTAssertEqual(overview.first?.profile?.trimmedName, "Apple Inc.")
+        XCTAssertEqual(overview.first?.profile?.logoURL, URL(string: "https://example.com/aapl.png"))
     }
 
     func testFetchStockInsightsReturnsRawPayloads() async throws {
