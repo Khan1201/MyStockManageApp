@@ -47,18 +47,6 @@ struct TradeRecordDTO: Equatable, Sendable {
         )
     }
 
-    init(managedObject: StoredTradeRecordManagedObject) {
-        id = managedObject.id
-        symbol = managedObject.symbol
-        tradedAt = managedObject.tradedAt
-        shareCount = Int(managedObject.shareCount)
-        transactionTypeRawValue = managedObject.transactionTypeRawValue
-        strategyRawValue = managedObject.strategyRawValue
-        targetPrice = managedObject.targetPrice?.doubleValue
-        stopLoss = managedObject.stopLoss?.doubleValue
-        reasoning = managedObject.reasoning
-    }
-
     func toDomain() throws -> TradeRecord {
         guard let transactionType = TradeTransactionType(rawValue: transactionTypeRawValue) else {
             throw TradeRecordDTOError.invalidTransactionType(transactionTypeRawValue)

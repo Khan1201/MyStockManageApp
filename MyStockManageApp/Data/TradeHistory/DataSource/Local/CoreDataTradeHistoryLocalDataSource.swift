@@ -40,3 +40,17 @@ final class CoreDataTradeHistoryLocalDataSource: TradeHistoryLocalDataSource {
         }
     }
 }
+
+private extension TradeRecordDTO {
+    init(managedObject: StoredTradeRecordManagedObject) {
+        id = managedObject.id
+        symbol = managedObject.symbol
+        tradedAt = managedObject.tradedAt
+        shareCount = Int(managedObject.shareCount)
+        transactionTypeRawValue = managedObject.transactionTypeRawValue
+        strategyRawValue = managedObject.strategyRawValue
+        targetPrice = managedObject.targetPrice?.doubleValue
+        stopLoss = managedObject.stopLoss?.doubleValue
+        reasoning = managedObject.reasoning
+    }
+}
