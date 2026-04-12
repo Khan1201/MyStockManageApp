@@ -15,6 +15,15 @@ struct FinnhubToRemoteTransformer: Sendable {
         )
     }
 
+    func makeSearchResult(from result: FinnhubSearchResultDTO) -> StockSearchResultRemoteModel {
+        StockSearchResultRemoteModel(
+            symbol: result.symbol,
+            displaySymbol: result.displaySymbol,
+            description: result.description,
+            type: result.type
+        )
+    }
+
     func makeRecommendation(from recommendation: FinnhubRecommendationDTO) -> StockRecommendationRemoteModel {
         StockRecommendationRemoteModel(
             buy: recommendation.buy,

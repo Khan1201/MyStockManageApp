@@ -31,6 +31,18 @@ struct FinnhubProfileDTO: Decodable, Equatable, Sendable {
     }
 }
 
+struct FinnhubSearchEnvelopeDTO: Decodable, Equatable, Sendable {
+    let count: Int
+    let result: [FinnhubSearchResultDTO]
+}
+
+struct FinnhubSearchResultDTO: Decodable, Equatable, Sendable {
+    let description: String
+    let displaySymbol: String
+    let symbol: String
+    let type: String
+}
+
 struct FinnhubRecommendationDTO: Decodable, Equatable, Sendable {
     let buy: Int
     let hold: Int
@@ -105,6 +117,8 @@ struct FinnhubIncomeStatementDTO: Equatable, Sendable {
         value(
             for: [
                 "us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax",
+                "us-gaap_RevenueFromContractWithCustomerIncludingAssessedTax",
+                "us-gaap_Revenues",
                 "us-gaap_SalesRevenueNet"
             ]
         )

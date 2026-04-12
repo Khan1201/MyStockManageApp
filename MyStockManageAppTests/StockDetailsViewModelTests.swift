@@ -112,8 +112,7 @@ final class StockDetailsViewModelTests: XCTestCase {
             symbol: "AAPL",
             companyName: "Apple Inc.",
             price: 189.43,
-            changePercent: 1.24,
-            brand: .apple
+            changePercent: 1.24
         )
     }
 }

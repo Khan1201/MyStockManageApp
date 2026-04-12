@@ -17,6 +17,16 @@ final class StocksRepositoryImpl: StocksRepository {
         return transformer.makeStocksOverview(from: remoteOverview)
     }
 
+    func fetchStock(symbol: String) async throws -> Stock {
+        let remoteStock = try await remoteDataSource.fetchStock(symbol: symbol)
+        return transformer.makeStock(from: remoteStock)
+    }
+
+    func searchStocks(query: String) async throws -> [StockSearchResult] {
+        let remoteResults = try await remoteDataSource.searchStocks(query: query)
+        return remoteResults.compactMap(transformer.makeSearchResult(from:))
+    }
+
     func fetchStockInsights(for stock: Stock) async throws -> StockInsights {
         let remoteInsights = try await remoteDataSource.fetchStockInsights(for: stock)
         return transformer.makeStockInsights(

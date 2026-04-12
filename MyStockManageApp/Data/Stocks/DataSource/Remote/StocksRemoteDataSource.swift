@@ -70,9 +70,22 @@ struct FinancialReportRemoteModel: Equatable, Sendable {
     let year: Int
 }
 
-struct PortfolioStockRemotePayload: Equatable, Sendable {
+struct StockOverviewRemotePayload: Equatable, Sendable {
+    let symbol: String
+    let companyName: String
     let quote: StockQuoteRemoteModel
     let profile: StockProfileRemoteModel?
+}
+
+struct StocksOverviewRemotePayload: Equatable, Sendable {
+    let portfolio: [StockOverviewRemotePayload]
+}
+
+struct StockSearchResultRemoteModel: Equatable, Sendable {
+    let symbol: String
+    let displaySymbol: String
+    let description: String
+    let type: String
 }
 
 struct StockInsightsRemotePayload: Equatable, Sendable {
@@ -96,7 +109,9 @@ struct EarningsRevenueRemotePayload: Equatable, Sendable {
 }
 
 protocol StocksRemoteDataSource {
-    func fetchStocksOverview() async throws -> [PortfolioStockRemotePayload]
+    func fetchStocksOverview() async throws -> StocksOverviewRemotePayload
+    func fetchStock(symbol: String) async throws -> StockOverviewRemotePayload
+    func searchStocks(query: String) async throws -> [StockSearchResultRemoteModel]
     func fetchStockInsights(for stock: Stock) async throws -> StockInsightsRemotePayload
     func fetchAnalystForecasts(for stock: Stock) async throws -> AnalystForecastsRemotePayload
     func fetchMarketSentiment(for stock: Stock) async throws -> [SentimentArticleRemoteModel]

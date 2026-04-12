@@ -20,8 +20,22 @@ struct StocksFinnhubRemoteDataSource: StocksRemoteDataSource {
         self.transformer = transformer
     }
 
-    func fetchStocksOverview() async throws -> [PortfolioStockRemotePayload] {
+    func fetchStocksOverview() async throws -> StocksOverviewRemotePayload {
         try await fetchLiveStocksOverview()
+    }
+
+    func fetchStock(symbol: String) async throws -> StockOverviewRemotePayload {
+        try await fetchStock(
+            for: SupportedStockDescriptor(
+                symbol: symbol,
+                companyName: symbol
+            )
+        )
+    }
+
+    func searchStocks(query: String) async throws -> [StockSearchResultRemoteModel] {
+        let envelope = try await service.searchStocks(query: query)
+        return envelope.result.map(transformer.makeSearchResult(from:))
     }
 
     func fetchStockInsights(for stock: Stock) async throws -> StockInsightsRemotePayload {
@@ -42,16 +56,26 @@ struct StocksFinnhubRemoteDataSource: StocksRemoteDataSource {
 }
 
 private extension StocksFinnhubRemoteDataSource {
-    func fetchLiveStocksOverview() async throws -> [PortfolioStockRemotePayload] {
-        let portfolio = try await withThrowingTaskGroup(of: IndexedPortfolioStockPayload.self) { group in
-            for (index, descriptor) in SupportedStockDescriptor.portfolioDescriptors.enumerated() {
+    func fetchLiveStocksOverview() async throws -> StocksOverviewRemotePayload {
+        let portfolio = try await fetchStockPayloads(for: SupportedStockDescriptor.portfolioDescriptors)
+
+        return StocksOverviewRemotePayload(
+            portfolio: portfolio
+        )
+    }
+
+    func fetchStockPayloads(
+        for descriptors: [SupportedStockDescriptor]
+    ) async throws -> [StockOverviewRemotePayload] {
+        try await withThrowingTaskGroup(of: IndexedStockOverviewPayload.self) { group in
+            for (index, descriptor) in descriptors.enumerated() {
                 group.addTask {
-                    let stock = try await fetchPortfolioStock(for: descriptor)
-                    return IndexedPortfolioStockPayload(index: index, stock: stock)
+                    let stock = try await fetchStock(for: descriptor)
+                    return IndexedStockOverviewPayload(index: index, stock: stock)
                 }
             }
 
-            var indexedStocks: [IndexedPortfolioStockPayload] = []
+            var indexedStocks: [IndexedStockOverviewPayload] = []
             for try await stock in group {
                 indexedStocks.append(stock)
             }
@@ -60,79 +84,126 @@ private extension StocksFinnhubRemoteDataSource {
                 .sorted { $0.index < $1.index }
                 .map(\.stock)
         }
-
-        return portfolio
     }
 
     func fetchLiveStockInsights(for stock: Stock) async throws -> StockInsightsRemotePayload {
-        async let recommendationTask = service.fetchRecommendations(symbol: stock.symbol)
-        async let articlesTask = service.fetchCompanyNews(symbol: stock.symbol)
-        async let annualReportsTask = service.fetchFinancialReports(symbol: stock.symbol, frequency: "annual")
-        async let quarterlyReportsTask = service.fetchFinancialReports(symbol: stock.symbol, frequency: "quarterly")
-        async let earningsHistoryTask = service.fetchEarningsHistory(symbol: stock.symbol)
-        async let earningsCalendarTask = service.fetchEarningsCalendar(symbol: stock.symbol)
-
-        let recommendations = try await recommendationTask
-        let articles = try await articlesTask
-        let annualReports = try await annualReportsTask
-        let quarterlyReports = try await quarterlyReportsTask
-        let earningsHistory = try await earningsHistoryTask
-        let earningsCalendar = try await earningsCalendarTask
+        async let recommendationsTask = fetchAvailableRecommendations(symbol: stock.symbol)
+        async let articlesTask = fetchAvailableSentimentArticles(symbol: stock.symbol)
+        async let annualReportsTask = fetchAvailableFinancialReports(symbol: stock.symbol, frequency: "annual")
+        async let quarterlyReportsTask = fetchAvailableFinancialReports(symbol: stock.symbol, frequency: "quarterly")
+        async let earningsHistoryTask = fetchAvailableEarningsHistory(symbol: stock.symbol)
+        async let earningsCalendarTask = fetchAvailableEarningsCalendar(symbol: stock.symbol)
 
         return StockInsightsRemotePayload(
-            recommendations: recommendations.map(transformer.makeRecommendation(from:)),
-            articles: articles.map(transformer.makeSentimentArticle(from:)),
-            annualReports: annualReports.map(transformer.makeFinancialReport(from:)),
-            quarterlyReports: quarterlyReports.map(transformer.makeFinancialReport(from:)),
-            earningsHistory: earningsHistory.map(transformer.makeEarningsHistory(from:)),
-            earningsCalendar: earningsCalendar.map(transformer.makeEarningsCalendar(from:))
+            recommendations: await recommendationsTask,
+            articles: await articlesTask,
+            annualReports: await annualReportsTask,
+            quarterlyReports: await quarterlyReportsTask,
+            earningsHistory: await earningsHistoryTask,
+            earningsCalendar: await earningsCalendarTask
         )
     }
 
     func fetchLiveAnalystForecasts(for stock: Stock) async throws -> AnalystForecastsRemotePayload {
-        async let recommendationsTask = service.fetchRecommendations(symbol: stock.symbol)
-        async let priceTargetTask = service.fetchPriceTarget(symbol: stock.symbol)
-
-        let recommendations = try await recommendationsTask
-        let priceTarget = try await priceTargetTask
+        async let recommendationsTask = fetchAvailableRecommendations(symbol: stock.symbol)
+        async let priceTargetTask = fetchAvailablePriceTarget(symbol: stock.symbol)
 
         return AnalystForecastsRemotePayload(
-            recommendations: recommendations.map(transformer.makeRecommendation(from:)),
-            priceTarget: transformer.makePriceTarget(from: priceTarget)
+            recommendations: await recommendationsTask,
+            priceTarget: await priceTargetTask
         )
     }
 
     func fetchLiveMarketSentimentSections(for stock: Stock) async throws -> [SentimentArticleRemoteModel] {
-        let articles = try await service.fetchCompanyNews(symbol: stock.symbol)
-        return articles.map(transformer.makeSentimentArticle(from:))
+        await fetchAvailableSentimentArticles(symbol: stock.symbol)
     }
 
     func fetchLiveEarningsRevenue(for stock: Stock) async throws -> EarningsRevenueRemotePayload {
-        async let quarterlyReportsTask = service.fetchFinancialReports(symbol: stock.symbol, frequency: "quarterly")
-        async let earningsHistoryTask = service.fetchEarningsHistory(symbol: stock.symbol)
-        async let earningsCalendarTask = service.fetchEarningsCalendar(symbol: stock.symbol)
-
-        let quarterlyReports = try await quarterlyReportsTask
-        let earningsHistory = try await earningsHistoryTask
-        let earningsCalendar = try await earningsCalendarTask
+        async let quarterlyReportsTask = fetchAvailableFinancialReports(symbol: stock.symbol, frequency: "quarterly")
+        async let earningsHistoryTask = fetchAvailableEarningsHistory(symbol: stock.symbol)
+        async let earningsCalendarTask = fetchAvailableEarningsCalendar(symbol: stock.symbol)
 
         return EarningsRevenueRemotePayload(
-            quarterlyReports: quarterlyReports.map(transformer.makeFinancialReport(from:)),
-            earningsHistory: earningsHistory.map(transformer.makeEarningsHistory(from:)),
-            earningsCalendar: earningsCalendar.map(transformer.makeEarningsCalendar(from:))
+            quarterlyReports: await quarterlyReportsTask,
+            earningsHistory: await earningsHistoryTask,
+            earningsCalendar: await earningsCalendarTask
         )
     }
 
-    func fetchPortfolioStock(for descriptor: SupportedStockDescriptor) async throws -> PortfolioStockRemotePayload {
+    func fetchStock(for descriptor: SupportedStockDescriptor) async throws -> StockOverviewRemotePayload {
         async let quoteTask = service.fetchQuote(symbol: descriptor.symbol)
         async let profileTask = service.fetchCompanyProfile(symbol: descriptor.symbol)
 
         let quote = try await quoteTask
         let profile = try? await profileTask
 
-        return PortfolioStockRemotePayload(
+        return StockOverviewRemotePayload(
+            symbol: descriptor.symbol,
+            companyName: descriptor.companyName,
             quote: transformer.makeQuote(from: quote),
             profile: profile.map(transformer.makeProfile(from:))
         )
+    }
+
+    func fetchAvailableRecommendations(symbol: String) async -> [StockRecommendationRemoteModel] {
+        do {
+            let recommendations = try await service.fetchRecommendations(symbol: symbol)
+            return recommendations.map(transformer.makeRecommendation(from:))
+        } catch {
+            return []
+        }
+    }
+
+    func fetchAvailablePriceTarget(symbol: String) async -> StockPriceTargetRemoteModel {
+        do {
+            let priceTarget = try await service.fetchPriceTarget(symbol: symbol)
+            return transformer.makePriceTarget(from: priceTarget)
+        } catch {
+            return StockPriceTargetRemoteModel(
+                targetHigh: nil,
+                targetLow: nil,
+                targetMean: nil,
+                targetMedian: nil
+            )
+        }
+    }
+
+    func fetchAvailableSentimentArticles(symbol: String) async -> [SentimentArticleRemoteModel] {
+        do {
+            let articles = try await service.fetchCompanyNews(symbol: symbol)
+            return articles.map(transformer.makeSentimentArticle(from:))
+        } catch {
+            return []
+        }
+    }
+
+    func fetchAvailableFinancialReports(
+        symbol: String,
+        frequency: String
+    ) async -> [FinancialReportRemoteModel] {
+        do {
+            let reports = try await service.fetchFinancialReports(symbol: symbol, frequency: frequency)
+            return reports.map(transformer.makeFinancialReport(from:))
+        } catch {
+            return []
+        }
+    }
+
+    func fetchAvailableEarningsHistory(symbol: String) async -> [EarningsHistoryRemoteModel] {
+        do {
+            let earningsHistory = try await service.fetchEarningsHistory(symbol: symbol)
+            return earningsHistory.map(transformer.makeEarningsHistory(from:))
+        } catch {
+            return []
+        }
+    }
+
+    func fetchAvailableEarningsCalendar(symbol: String) async -> [EarningsCalendarRemoteModel] {
+        do {
+            let earningsCalendar = try await service.fetchEarningsCalendar(symbol: symbol)
+            return earningsCalendar.map(transformer.makeEarningsCalendar(from:))
+        } catch {
+            return []
+        }
     }
 }

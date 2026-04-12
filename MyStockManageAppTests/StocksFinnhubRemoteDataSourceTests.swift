@@ -33,10 +33,57 @@ final class StocksFinnhubRemoteDataSourceTests: XCTestCase {
 
         let overview = try await sut.fetchStocksOverview()
 
-        XCTAssertEqual(overview.count, 5)
-        XCTAssertEqual(overview.first?.quote.currentPrice, 189.43)
-        XCTAssertEqual(overview.first?.profile?.trimmedName, "Apple Inc.")
-        XCTAssertEqual(overview.first?.profile?.logoURL, URL(string: "https://example.com/aapl.png"))
+        XCTAssertEqual(overview.portfolio.count, 5)
+        XCTAssertEqual(overview.portfolio.first?.quote.currentPrice, 189.43)
+        XCTAssertEqual(overview.portfolio.first?.profile?.trimmedName, "Apple Inc.")
+        XCTAssertEqual(overview.portfolio.first?.profile?.logoURL, URL(string: "https://example.com/aapl.png"))
+    }
+
+    func testFetchStockBuildsSingleStockPayload() async throws {
+        let sut = makeSUT { request in
+            switch try Self.endpoint(for: request) {
+            case "quote?symbol=AMD":
+                return Self.jsonData(#"{"c":142.10,"dp":-0.78}"#)
+            case "stock/profile2?symbol=AMD":
+                return Self.jsonData(#"{"name":"Advanced Micro Devices, Inc.","logo":"https://example.com/amd.png"}"#)
+            default:
+                XCTFail("Unexpected request")
+                return Data()
+            }
+        }
+
+        let stock = try await sut.fetchStock(symbol: "AMD")
+
+        XCTAssertEqual(stock.symbol, "AMD")
+        XCTAssertEqual(stock.quote.currentPrice, 142.10)
+        XCTAssertEqual(stock.profile?.trimmedName, "Advanced Micro Devices, Inc.")
+        XCTAssertEqual(stock.profile?.logoURL, URL(string: "https://example.com/amd.png"))
+    }
+
+    func testSearchStocksReturnsSearchResultPayloads() async throws {
+        let sut = makeSUT { request in
+            switch try Self.endpoint(for: request) {
+            case "search?q=apple":
+                return Self.jsonData(#"{"count":1,"result":[{"description":"Apple Inc.","displaySymbol":"AAPL","symbol":"AAPL","type":"Common Stock"}]}"#)
+            default:
+                XCTFail("Unexpected request")
+                return Data()
+            }
+        }
+
+        let results = try await sut.searchStocks(query: "apple")
+
+        XCTAssertEqual(
+            results,
+            [
+                StockSearchResultRemoteModel(
+                    symbol: "AAPL",
+                    displaySymbol: "AAPL",
+                    description: "Apple Inc.",
+                    type: "Common Stock"
+                )
+            ]
+        )
     }
 
     func testFetchStockInsightsReturnsRawPayloads() async throws {
@@ -68,6 +115,37 @@ final class StocksFinnhubRemoteDataSourceTests: XCTestCase {
         XCTAssertEqual(insights.quarterlyReports, [])
     }
 
+    func testFetchStockInsightsKeepsAvailablePayloadsWhenOneEndpointFails() async throws {
+        let sut = makeSUT { request in
+            switch try Self.endpoint(for: request) {
+            case "stock/recommendation?symbol=LITE":
+                return Self.jsonData(#"[{"buy":17,"hold":6,"period":"2026-04-01","sell":0,"strongBuy":7,"strongSell":0}]"#)
+            case "company-news?from=2026-03-15&symbol=LITE&to=2026-03-29":
+                return Self.jsonData(#"[{"datetime":1774751400,"headline":"Lumentum shares surge on AI demand","id":1,"source":"Yahoo","summary":"Strong growth outlook improves expectations."}]"#)
+            case "stock/financials-reported?freq=annual&symbol=LITE":
+                throw URLError(.badServerResponse)
+            case "stock/financials-reported?freq=quarterly&symbol=LITE":
+                return Self.jsonData(#"{"data":[{"filedDate":"2026-02-04 00:00:00","quarter":2,"year":2026,"report":{"ic":[{"concept":"us-gaap_RevenueFromContractWithCustomerIncludingAssessedTax","value":1199300000},{"concept":"us-gaap_EarningsPerShareDiluted","value":0.99}]}}]}"#)
+            case "stock/earnings?symbol=LITE":
+                return Self.jsonData(#"[{"actual":1.67,"estimate":1.4224,"quarter":2,"year":2026}]"#)
+            case "calendar/earnings?from=2025-01-01&symbol=LITE&to=2028-12-31":
+                return Self.jsonData(#"{"earningsCalendar":[{"date":"2026-05-05","epsEstimate":2.2948,"quarter":3,"revenueEstimate":813135299,"year":2026}]}"#)
+            default:
+                XCTFail("Unexpected request")
+                return Data()
+            }
+        }
+
+        let insights = try await sut.fetchStockInsights(for: makeLumentumStock())
+
+        XCTAssertEqual(insights.recommendations.first?.strongBuy, 7)
+        XCTAssertEqual(insights.articles.first?.headline, "Lumentum shares surge on AI demand")
+        XCTAssertEqual(insights.annualReports, [])
+        XCTAssertEqual(insights.quarterlyReports.first?.revenueValue, 1_199_300_000)
+        XCTAssertEqual(insights.earningsHistory.first?.actual, 1.67)
+        XCTAssertEqual(insights.earningsCalendar.first?.revenueEstimate, 813_135_299)
+    }
+
     func testFetchAnalystForecastsReturnsRecommendationsAndPriceTargetPayload() async throws {
         let sut = makeSUT { request in
             switch try Self.endpoint(for: request) {
@@ -85,6 +163,26 @@ final class StocksFinnhubRemoteDataSourceTests: XCTestCase {
 
         XCTAssertEqual(content.recommendations.first?.buy, 10)
         XCTAssertEqual(content.priceTarget.targetMean, 202.4)
+    }
+
+    func testFetchAnalystForecastsKeepsRecommendationsWhenPriceTargetFails() async throws {
+        let sut = makeSUT { request in
+            switch try Self.endpoint(for: request) {
+            case "stock/recommendation?symbol=LITE":
+                return Self.jsonData(#"[{"buy":17,"hold":6,"period":"2026-04-01","sell":0,"strongBuy":7,"strongSell":0}]"#)
+            case "stock/price-target?symbol=LITE":
+                return Self.jsonData(#"{"error":"You don't have access to this resource."}"#)
+            default:
+                XCTFail("Unexpected request")
+                return Data()
+            }
+        }
+
+        let content = try await sut.fetchAnalystForecasts(for: makeLumentumStock())
+
+        XCTAssertEqual(content.recommendations.first?.buy, 17)
+        XCTAssertNil(content.priceTarget.targetMean)
+        XCTAssertNil(content.priceTarget.targetMedian)
     }
 
     func testFetchMarketSentimentReturnsRemoteArticles() async throws {
@@ -108,7 +206,7 @@ final class StocksFinnhubRemoteDataSourceTests: XCTestCase {
         let sut = makeSUT { request in
             switch try Self.endpoint(for: request) {
             case "stock/financials-reported?freq=quarterly&symbol=AAPL":
-                return Self.jsonData(#"{"data":[{"filedDate":"2026-01-30 00:00:00","quarter":1,"year":2026,"report":{"ic":[{"concept":"us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax","value":143756000000},{"concept":"us-gaap_EarningsPerShareDiluted","value":2.84}]}}]}"#)
+                return Self.jsonData(#"{"data":[{"filedDate":"2026-01-30 00:00:00","quarter":1,"year":2026,"report":{"ic":[{"concept":"us-gaap_RevenueFromContractWithCustomerIncludingAssessedTax","value":143756000000},{"concept":"us-gaap_EarningsPerShareDiluted","value":2.84}]}}]}"#)
             case "stock/earnings?symbol=AAPL":
                 return Self.jsonData(#"[{"actual":2.84,"estimate":2.7257,"quarter":1,"year":2026}]"#)
             case "calendar/earnings?from=2025-01-01&symbol=AAPL&to=2028-12-31":
@@ -122,6 +220,7 @@ final class StocksFinnhubRemoteDataSourceTests: XCTestCase {
         let records = try await sut.fetchEarningsRevenue(for: makeAppleStock())
 
         XCTAssertEqual(records.quarterlyReports.first?.quarter, 1)
+        XCTAssertEqual(records.quarterlyReports.first?.revenueValue, 143_756_000_000)
         XCTAssertEqual(records.earningsHistory.first?.actual, 2.84)
         XCTAssertEqual(records.earningsCalendar.first?.quarter, 2)
     }
@@ -166,8 +265,16 @@ private extension StocksFinnhubRemoteDataSourceTests {
             symbol: "AAPL",
             companyName: "Apple Inc.",
             price: 189.43,
-            changePercent: 1.31,
-            brand: .apple
+            changePercent: 1.31
+        )
+    }
+
+    func makeLumentumStock() -> Stock {
+        Stock(
+            symbol: "LITE",
+            companyName: "Lumentum Holdings Inc",
+            price: 897.30,
+            changePercent: 0.35
         )
     }
 

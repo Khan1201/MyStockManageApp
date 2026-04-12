@@ -95,8 +95,7 @@ final class MarketSentimentViewModelTests: XCTestCase {
             symbol: "NVDA",
             companyName: "NVIDIA Corporation",
             price: 924.79,
-            changePercent: 2.38,
-            brand: .nvidia
+            changePercent: 2.38
         )
     }
 }

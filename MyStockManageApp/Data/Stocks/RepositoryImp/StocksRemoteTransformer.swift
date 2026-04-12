@@ -12,10 +12,37 @@ struct StocksRemoteTransformer {
         self.referenceDateProvider = referenceDateProvider
     }
 
-    func makeStocksOverview(from portfolioPayload: [PortfolioStockRemotePayload]) -> StocksOverview {
+    func makeStocksOverview(from overviewPayload: StocksOverviewRemotePayload) -> StocksOverview {
         StocksOverview(
-            portfolio: zip(SupportedStockDescriptor.portfolioDescriptors, portfolioPayload).compactMap(makePortfolioStock),
-            searchableStocks: SupportedStockDescriptor.searchableDescriptors.map(makeSearchResultStock)
+            portfolio: overviewPayload.portfolio.map(makeStock)
+        )
+    }
+
+    func makeStock(from payload: StockOverviewRemotePayload) -> Stock {
+        Stock(
+            symbol: payload.symbol,
+            companyName: payload.profile?.trimmedName ?? payload.companyName,
+            price: payload.quote.currentPrice,
+            changePercent: payload.quote.changePercent,
+            logoURL: payload.profile?.logoURL
+        )
+    }
+
+    func makeSearchResult(from result: StockSearchResultRemoteModel) -> StockSearchResult? {
+        let symbol = result.symbol.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !symbol.isEmpty else {
+            return nil
+        }
+
+        let displaySymbol = result.displaySymbol.trimmingCharacters(in: .whitespacesAndNewlines)
+        let description = result.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let type = result.type.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return StockSearchResult(
+            symbol: symbol,
+            displaySymbol: displaySymbol.isEmpty ? symbol : displaySymbol,
+            companyName: description.isEmpty ? symbol : description,
+            type: type
         )
     }
 
@@ -118,28 +145,6 @@ struct StocksRemoteTransformer {
 }
 
 private extension StocksRemoteTransformer {
-    func makePortfolioStock(from pair: (SupportedStockDescriptor, PortfolioStockRemotePayload)) -> Stock {
-        let descriptor = pair.0
-        let payload = pair.1
-        return Stock(
-            symbol: descriptor.symbol,
-            companyName: payload.profile?.trimmedName ?? descriptor.companyName,
-            price: payload.quote.currentPrice,
-            changePercent: payload.quote.changePercent,
-            brand: descriptor.brand,
-            logoURL: payload.profile?.logoURL
-        )
-    }
-
-    func makeSearchResultStock(from descriptor: SupportedStockDescriptor) -> StockSearchResult {
-        return StockSearchResult(
-            symbol: descriptor.symbol,
-            companyName: descriptor.companyName,
-            brand: descriptor.brand,
-            logoURL: nil
-        )
-    }
-
     func makeForecastSummary(from recommendations: [StockRecommendationRemoteModel]) -> [ForecastSummaryMetric] {
         guard let latest = recommendations.sorted(by: { $0.period > $1.period }).first else {
             return []

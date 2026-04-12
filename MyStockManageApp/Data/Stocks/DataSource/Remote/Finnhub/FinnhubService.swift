@@ -101,6 +101,14 @@ struct FinnhubService {
         )
     }
 
+    func searchStocks(query: String) async throws -> FinnhubSearchEnvelopeDTO {
+        try await request(
+            path: "search",
+            queryItems: [URLQueryItem(name: "q", value: query)],
+            responseType: FinnhubSearchEnvelopeDTO.self
+        )
+    }
+
     func fetchRecommendations(symbol: String) async throws -> [FinnhubRecommendationDTO] {
         try await request(
             path: "stock/recommendation",

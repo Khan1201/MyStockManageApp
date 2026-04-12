@@ -31,7 +31,6 @@ struct SearchResultsSectionView: View {
 
                         if index < results.count - 1 {
                             Divider()
-                                .padding(.leading, 72)
                         }
                     }
                 }

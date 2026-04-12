@@ -21,7 +21,7 @@ struct FetchStocksOverviewUseCase {
 extension FetchStocksOverviewUseCase {
     static let noop = FetchStocksOverviewUseCase(
         operation: {
-            StocksOverview(portfolio: [], searchableStocks: [])
+            StocksOverview(portfolio: [])
         }
     )
 }

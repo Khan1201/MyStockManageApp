@@ -58,6 +58,11 @@ struct StocksView: View {
                 viewModel: viewModel.makeStockDetailsViewModel(for: stock)
             )
         }
+        .fullScreenCover(item: selectedSearchResultDetailsStockBinding) { stock in
+            StockDetailsView(
+                viewModel: viewModel.makeSearchResultStockDetailsViewModel(for: stock)
+            )
+        }
         .task {
             await viewModel.loadStocksOverview()
         }
@@ -73,6 +78,19 @@ struct StocksView: View {
                 }
 
                 viewModel.didSelectPortfolioStock(stock)
+            }
+        )
+    }
+
+    private var selectedSearchResultDetailsStockBinding: Binding<PortfolioStock?> {
+        Binding(
+            get: { viewModel.selectedSearchResultDetailsStock },
+            set: { stock in
+                guard stock == nil else {
+                    return
+                }
+
+                viewModel.didDismissSearchResultStockDetails()
             }
         )
     }

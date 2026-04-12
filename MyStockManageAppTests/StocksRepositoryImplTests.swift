@@ -2,25 +2,79 @@ import XCTest
 @testable import MyStockManageApp
 
 final class StocksRepositoryImplTests: XCTestCase {
-    func testFetchStocksOverviewLoadsRemoteData() async throws {
-        let remoteOverview: [PortfolioStockRemotePayload] = [
-            .init(
-                quote: .init(currentPrice: 189.43, changePercent: 1.24),
-                profile: .init(
-                    name: "Apple Inc.",
-                    logoURL: URL(string: "https://example.com/aapl.png")
+    func testFetchStocksOverviewLoadsPortfolioRemoteData() async throws {
+        let remoteOverview = StocksOverviewRemotePayload(
+            portfolio: [
+                .init(
+                    symbol: "AAPL",
+                    companyName: "Apple Inc.",
+                    quote: .init(currentPrice: 189.43, changePercent: 1.24),
+                    profile: .init(
+                        name: "Apple Inc.",
+                        logoURL: URL(string: "https://example.com/aapl.png")
+                    )
                 )
-            )
-        ]
+            ]
+        )
         let repository = StocksRepositoryImpl(remoteDataSource: StocksRemoteDataSourceStub(overview: remoteOverview))
 
         let overview = try await repository.fetchStocksOverview()
 
         XCTAssertEqual(overview.portfolio.map(\.symbol), ["AAPL"])
         XCTAssertEqual(overview.portfolio.first?.logoURL, URL(string: "https://example.com/aapl.png"))
+    }
+
+    func testFetchStockLoadsSingleRemoteStock() async throws {
+        let remoteStock = StockOverviewRemotePayload(
+            symbol: "AMD",
+            companyName: "AMD",
+            quote: .init(currentPrice: 142.10, changePercent: -0.78),
+            profile: .init(name: "Advanced Micro Devices, Inc.")
+        )
+        let repository = StocksRepositoryImpl(
+            remoteDataSource: StocksRemoteDataSourceStub(stock: remoteStock)
+        )
+
+        let stock = try await repository.fetchStock(symbol: "AMD")
+
+        XCTAssertEqual(stock.symbol, "AMD")
+        XCTAssertEqual(stock.companyName, "Advanced Micro Devices, Inc.")
+        XCTAssertEqual(stock.price, 142.10)
+        XCTAssertEqual(stock.changePercent, -0.78)
+    }
+
+    func testSearchStocksMapsRemoteResults() async throws {
+        let repository = StocksRepositoryImpl(
+            remoteDataSource: StocksRemoteDataSourceStub(
+                searchResults: [
+                    .init(
+                        symbol: "AAPL",
+                        displaySymbol: "AAPL",
+                        description: "Apple Inc.",
+                        type: "Common Stock"
+                    ),
+                    .init(
+                        symbol: "",
+                        displaySymbol: "",
+                        description: "Invalid",
+                        type: "Common Stock"
+                    )
+                ]
+            )
+        )
+
+        let results = try await repository.searchStocks(query: "apple")
+
         XCTAssertEqual(
-            overview.searchableStocks.map(\.symbol),
-            SupportedStockDescriptor.searchableDescriptors.map(\.symbol)
+            results,
+            [
+                StockSearchResult(
+                    symbol: "AAPL",
+                    displaySymbol: "AAPL",
+                    companyName: "Apple Inc.",
+                    type: "Common Stock"
+                )
+            ]
         )
     }
 
@@ -44,7 +98,7 @@ final class StocksRepositoryImplTests: XCTestCase {
             earningsCalendar: []
         )
         let repository = StocksRepositoryImpl(remoteDataSource: StocksRemoteDataSourceStub(stockInsights: remoteInsights))
-        let stock = Stock(symbol: "TSLA", companyName: "Tesla, Inc.", price: 175.22, changePercent: 2.15, brand: .tesla)
+        let stock = Stock(symbol: "TSLA", companyName: "Tesla, Inc.", price: 175.22, changePercent: 2.15)
 
         let insights = try await repository.fetchStockInsights(for: stock)
 
@@ -57,12 +111,16 @@ final class StocksRepositoryImplTests: XCTestCase {
 
     func testFetchStocksOverviewRequestsRemoteDataOnEveryCall() async throws {
         let remoteDataSource = CountingStocksRemoteDataSource(
-            overview: [
-                .init(
-                    quote: .init(currentPrice: 189.43, changePercent: 1.24),
-                    profile: .init(name: "Apple Inc.")
-                )
-            ]
+            overview: StocksOverviewRemotePayload(
+                portfolio: [
+                    .init(
+                        symbol: "AAPL",
+                        companyName: "Apple Inc.",
+                        quote: .init(currentPrice: 189.43, changePercent: 1.24),
+                        profile: .init(name: "Apple Inc.")
+                    )
+                ]
+            )
         )
         let repository = StocksRepositoryImpl(remoteDataSource: remoteDataSource)
 
@@ -75,7 +133,14 @@ final class StocksRepositoryImplTests: XCTestCase {
 }
 
 private struct StocksRemoteDataSourceStub: StocksRemoteDataSource {
-    var overview: [PortfolioStockRemotePayload] = []
+    var overview = StocksOverviewRemotePayload(portfolio: [])
+    var stock = StockOverviewRemotePayload(
+        symbol: "AAPL",
+        companyName: "Apple Inc.",
+        quote: .init(currentPrice: 189.43, changePercent: 1.24),
+        profile: .init(name: "Apple Inc.")
+    )
+    var searchResults: [StockSearchResultRemoteModel] = []
     var stockInsights = StockInsightsRemotePayload(
         recommendations: [],
         articles: [],
@@ -95,8 +160,16 @@ private struct StocksRemoteDataSourceStub: StocksRemoteDataSource {
         earningsCalendar: []
     )
 
-    func fetchStocksOverview() async throws -> [PortfolioStockRemotePayload] {
+    func fetchStocksOverview() async throws -> StocksOverviewRemotePayload {
         overview
+    }
+
+    func fetchStock(symbol _: String) async throws -> StockOverviewRemotePayload {
+        stock
+    }
+
+    func searchStocks(query _: String) async throws -> [StockSearchResultRemoteModel] {
+        searchResults
     }
 
     func fetchStockInsights(for _: Stock) async throws -> StockInsightsRemotePayload {
@@ -118,15 +191,28 @@ private struct StocksRemoteDataSourceStub: StocksRemoteDataSource {
 
 private actor CountingStocksRemoteDataSource: StocksRemoteDataSource {
     private(set) var overviewFetchCount = 0
-    let overview: [PortfolioStockRemotePayload]
+    let overview: StocksOverviewRemotePayload
 
-    init(overview: [PortfolioStockRemotePayload]) {
+    init(overview: StocksOverviewRemotePayload) {
         self.overview = overview
     }
 
-    func fetchStocksOverview() async throws -> [PortfolioStockRemotePayload] {
+    func fetchStocksOverview() async throws -> StocksOverviewRemotePayload {
         overviewFetchCount += 1
         return overview
+    }
+
+    func fetchStock(symbol: String) async throws -> StockOverviewRemotePayload {
+        StockOverviewRemotePayload(
+            symbol: symbol,
+            companyName: symbol,
+            quote: .init(currentPrice: 0, changePercent: 0),
+            profile: nil
+        )
+    }
+
+    func searchStocks(query _: String) async throws -> [StockSearchResultRemoteModel] {
+        []
     }
 
     func fetchStockInsights(for _: Stock) async throws -> StockInsightsRemotePayload {

@@ -5,6 +5,8 @@ final class AppDependencyContainer {
     private let fetchTradeHistoryUseCase: FetchTradeHistoryUseCase
     private let saveTradeUseCase: SaveTradeUseCase
     private let fetchStocksOverviewUseCase: FetchStocksOverviewUseCase
+    private let searchStocksUseCase: SearchStocksUseCase
+    private let fetchStockUseCase: FetchStockUseCase
     private let fetchStockInsightsUseCase: FetchStockInsightsUseCase
     private let fetchAnalystForecastsUseCase: FetchAnalystForecastsUseCase
     private let fetchMarketSentimentUseCase: FetchMarketSentimentUseCase
@@ -31,6 +33,8 @@ final class AppDependencyContainer {
         )
 
         fetchStocksOverviewUseCase = FetchStocksOverviewUseCase(repository: stocksRepository)
+        searchStocksUseCase = SearchStocksUseCase(repository: stocksRepository)
+        fetchStockUseCase = FetchStockUseCase(repository: stocksRepository)
         fetchStockInsightsUseCase = FetchStockInsightsUseCase(repository: stocksRepository)
         fetchAnalystForecastsUseCase = FetchAnalystForecastsUseCase(repository: stocksRepository)
         fetchMarketSentimentUseCase = FetchMarketSentimentUseCase(repository: stocksRepository)
@@ -41,6 +45,8 @@ final class AppDependencyContainer {
     func makeStocksViewModel() -> StocksViewModel {
         StocksViewModel(
             fetchStocksOverviewUseCase: fetchStocksOverviewUseCase,
+            searchStocksUseCase: searchStocksUseCase,
+            fetchStockUseCase: fetchStockUseCase,
             stockDetailsViewModelBuilder: { [weak self] stock, dismissAction in
                 guard let self else {
                     return StockDetailsViewModel(stock: stock, dismissAction: dismissAction)

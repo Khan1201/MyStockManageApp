@@ -1,33 +1,21 @@
 import Foundation
 
-struct SupportedStockDescriptor {
+struct SupportedStockDescriptor: Sendable {
     let symbol: String
     let companyName: String
-    let brand: StockBrand
 
     static let portfolioDescriptors: [SupportedStockDescriptor] = [
-        .init(symbol: "AAPL", companyName: "Apple Inc.", brand: .apple),
-        .init(symbol: "MSFT", companyName: "Microsoft Corp", brand: .microsoft),
-        .init(symbol: "TSLA", companyName: "Tesla, Inc.", brand: .tesla),
-        .init(symbol: "NVDA", companyName: "NVIDIA Corp", brand: .nvidia),
-        .init(symbol: "GOOGL", companyName: "Alphabet Inc.", brand: .google)
-    ]
-
-    static let searchableDescriptors: [SupportedStockDescriptor] = [
-        .init(symbol: "AAPL", companyName: "Apple Inc.", brand: .apple),
-        .init(symbol: "AMZN", companyName: "Amazon.com, Inc.", brand: .amazon),
-        .init(symbol: "AMD", companyName: "Advanced Micro Devices, Inc.", brand: .amd),
-        .init(symbol: "ADBE", companyName: "Adobe Inc.", brand: .adobe),
-        .init(symbol: "MSFT", companyName: "Microsoft Corp", brand: .microsoft),
-        .init(symbol: "TSLA", companyName: "Tesla, Inc.", brand: .tesla),
-        .init(symbol: "NVDA", companyName: "NVIDIA Corp", brand: .nvidia),
-        .init(symbol: "GOOGL", companyName: "Alphabet Inc.", brand: .google)
+        .init(symbol: "AAPL", companyName: "Apple Inc."),
+        .init(symbol: "MSFT", companyName: "Microsoft Corp"),
+        .init(symbol: "TSLA", companyName: "Tesla, Inc."),
+        .init(symbol: "NVDA", companyName: "NVIDIA Corp"),
+        .init(symbol: "GOOGL", companyName: "Alphabet Inc.")
     ]
 }
 
-struct IndexedPortfolioStockPayload {
+struct IndexedStockOverviewPayload: Sendable {
     let index: Int
-    let stock: PortfolioStockRemotePayload
+    let stock: StockOverviewRemotePayload
 }
 
 struct QuarterKey: Hashable {
