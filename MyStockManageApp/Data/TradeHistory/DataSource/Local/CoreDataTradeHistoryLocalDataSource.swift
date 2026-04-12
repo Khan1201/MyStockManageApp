@@ -18,31 +18,21 @@ final class CoreDataTradeHistoryLocalDataSource: TradeHistoryLocalDataSource {
     }
 
     func saveTrade(_ trade: TradeRecordDTO) async throws {
-        try await saveTrades([trade])
-    }
-
-    func saveTrades(_ trades: [TradeRecordDTO]) async throws {
-        guard !trades.isEmpty else {
-            return
-        }
-
         try await persistentStorage.performBackgroundTask { context in
-            for trade in trades {
-                let request = StoredTradeRecordManagedObject.fetchRequest()
-                request.fetchLimit = 1
-                request.predicate = NSPredicate(format: "id == %@", trade.id)
+            let request = StoredTradeRecordManagedObject.fetchRequest()
+            request.fetchLimit = 1
+            request.predicate = NSPredicate(format: "id == %@", trade.id)
 
-                let managedObject = try context.fetch(request).first ?? StoredTradeRecordManagedObject(context: context)
-                managedObject.id = trade.id
-                managedObject.symbol = trade.symbol
-                managedObject.tradedAt = trade.tradedAt
-                managedObject.shareCount = Int64(trade.shareCount)
-                managedObject.transactionTypeRawValue = trade.transactionTypeRawValue
-                managedObject.strategyRawValue = trade.strategyRawValue
-                managedObject.targetPrice = trade.targetPrice as NSNumber?
-                managedObject.stopLoss = trade.stopLoss as NSNumber?
-                managedObject.reasoning = trade.reasoning
-            }
+            let managedObject = try context.fetch(request).first ?? StoredTradeRecordManagedObject(context: context)
+            managedObject.id = trade.id
+            managedObject.symbol = trade.symbol
+            managedObject.tradedAt = trade.tradedAt
+            managedObject.shareCount = Int64(trade.shareCount)
+            managedObject.transactionTypeRawValue = trade.transactionTypeRawValue
+            managedObject.strategyRawValue = trade.strategyRawValue
+            managedObject.targetPrice = trade.targetPrice as NSNumber?
+            managedObject.stopLoss = trade.stopLoss as NSNumber?
+            managedObject.reasoning = trade.reasoning
 
             if context.hasChanges {
                 try context.save()
