@@ -2,12 +2,14 @@ import Foundation
 
 struct StocksFinnhubRemoteDataSource: StocksRemoteDataSource {
     private let service: FinnhubService
+    private let transformer: FinnhubToRemoteTransformer
 
     init(
         session: any HTTPClientSession = URLSession.shared,
         configuration: FinnhubConfiguration = .live(),
         calendar: Calendar = .autoupdatingCurrent,
-        nowProvider: @escaping () -> Date = Date.init
+        nowProvider: @escaping () -> Date = Date.init,
+        transformer: FinnhubToRemoteTransformer = FinnhubToRemoteTransformer()
     ) {
         self.service = FinnhubService(
             session: session,
@@ -15,6 +17,7 @@ struct StocksFinnhubRemoteDataSource: StocksRemoteDataSource {
             calendar: calendar,
             nowProvider: nowProvider
         )
+        self.transformer = transformer
     }
 
     func fetchStocksOverview() async throws -> [PortfolioStockRemotePayload] {
@@ -77,12 +80,12 @@ private extension StocksFinnhubRemoteDataSource {
         let earningsCalendar = try await earningsCalendarTask
 
         return StockInsightsRemotePayload(
-            recommendations: recommendations.map(makeRecommendation(from:)),
-            articles: articles.map(makeSentimentArticle(from:)),
-            annualReports: annualReports.map(makeFinancialReport(from:)),
-            quarterlyReports: quarterlyReports.map(makeFinancialReport(from:)),
-            earningsHistory: earningsHistory.map(makeEarningsHistory(from:)),
-            earningsCalendar: earningsCalendar.map(makeEarningsCalendar(from:))
+            recommendations: recommendations.map(transformer.makeRecommendation(from:)),
+            articles: articles.map(transformer.makeSentimentArticle(from:)),
+            annualReports: annualReports.map(transformer.makeFinancialReport(from:)),
+            quarterlyReports: quarterlyReports.map(transformer.makeFinancialReport(from:)),
+            earningsHistory: earningsHistory.map(transformer.makeEarningsHistory(from:)),
+            earningsCalendar: earningsCalendar.map(transformer.makeEarningsCalendar(from:))
         )
     }
 
@@ -94,14 +97,14 @@ private extension StocksFinnhubRemoteDataSource {
         let priceTarget = try await priceTargetTask
 
         return AnalystForecastsRemotePayload(
-            recommendations: recommendations.map(makeRecommendation(from:)),
-            priceTarget: makePriceTarget(from: priceTarget)
+            recommendations: recommendations.map(transformer.makeRecommendation(from:)),
+            priceTarget: transformer.makePriceTarget(from: priceTarget)
         )
     }
 
     func fetchLiveMarketSentimentSections(for stock: Stock) async throws -> [SentimentArticleRemoteModel] {
         let articles = try await service.fetchCompanyNews(symbol: stock.symbol)
-        return articles.map { makeSentimentArticle(from: $0) }
+        return articles.map(transformer.makeSentimentArticle(from:))
     }
 
     func fetchLiveEarningsRevenue(for stock: Stock) async throws -> EarningsRevenueRemotePayload {
@@ -114,9 +117,9 @@ private extension StocksFinnhubRemoteDataSource {
         let earningsCalendar = try await earningsCalendarTask
 
         return EarningsRevenueRemotePayload(
-            quarterlyReports: quarterlyReports.map(makeFinancialReport(from:)),
-            earningsHistory: earningsHistory.map(makeEarningsHistory(from:)),
-            earningsCalendar: earningsCalendar.map(makeEarningsCalendar(from:))
+            quarterlyReports: quarterlyReports.map(transformer.makeFinancialReport(from:)),
+            earningsHistory: earningsHistory.map(transformer.makeEarningsHistory(from:)),
+            earningsCalendar: earningsCalendar.map(transformer.makeEarningsCalendar(from:))
         )
     }
 
@@ -128,78 +131,8 @@ private extension StocksFinnhubRemoteDataSource {
         let profile = try? await profileTask
 
         return PortfolioStockRemotePayload(
-            quote: makeQuote(from: quote),
-            profile: profile.map { makeProfile(from: $0) }
-        )
-    }
-
-    func makeQuote(from quote: FinnhubQuoteDTO) -> StockQuoteRemoteModel {
-        StockQuoteRemoteModel(
-            currentPrice: quote.currentPrice,
-            changePercent: quote.changePercent
-        )
-    }
-
-    func makeProfile(from profile: FinnhubProfileDTO) -> StockProfileRemoteModel {
-        StockProfileRemoteModel(name: profile.name)
-    }
-
-    func makeRecommendation(from recommendation: FinnhubRecommendationDTO) -> StockRecommendationRemoteModel {
-        StockRecommendationRemoteModel(
-            buy: recommendation.buy,
-            hold: recommendation.hold,
-            period: recommendation.period,
-            sell: recommendation.sell,
-            strongBuy: recommendation.strongBuy,
-            strongSell: recommendation.strongSell
-        )
-    }
-
-    func makePriceTarget(from priceTarget: FinnhubPriceTargetDTO) -> StockPriceTargetRemoteModel {
-        StockPriceTargetRemoteModel(
-            targetHigh: priceTarget.targetHigh,
-            targetLow: priceTarget.targetLow,
-            targetMean: priceTarget.targetMean,
-            targetMedian: priceTarget.targetMedian
-        )
-    }
-
-    func makeSentimentArticle(from article: FinnhubNewsDTO) -> SentimentArticleRemoteModel {
-        SentimentArticleRemoteModel(
-            datetime: article.datetime,
-            headline: article.headline,
-            id: article.id,
-            source: article.source,
-            summary: article.summary
-        )
-    }
-
-    func makeFinancialReport(from report: FinnhubFinancialReportDTO) -> FinancialReportRemoteModel {
-        FinancialReportRemoteModel(
-            filedDate: report.filedDate,
-            quarter: report.quarter,
-            revenueValue: report.report.incomeStatement.revenueValue,
-            dilutedEPSValue: report.report.incomeStatement.dilutedEPSValue,
-            year: report.year
-        )
-    }
-
-    func makeEarningsHistory(from earnings: FinnhubEarningsHistoryDTO) -> EarningsHistoryRemoteModel {
-        EarningsHistoryRemoteModel(
-            actual: earnings.actual,
-            estimate: earnings.estimate,
-            quarter: earnings.quarter,
-            year: earnings.year
-        )
-    }
-
-    func makeEarningsCalendar(from earnings: FinnhubEarningsCalendarDTO) -> EarningsCalendarRemoteModel {
-        EarningsCalendarRemoteModel(
-            date: earnings.date,
-            epsEstimate: earnings.epsEstimate,
-            quarter: earnings.quarter,
-            revenueEstimate: earnings.revenueEstimate,
-            year: earnings.year
+            quote: transformer.makeQuote(from: quote),
+            profile: profile.map(transformer.makeProfile(from:))
         )
     }
 }
